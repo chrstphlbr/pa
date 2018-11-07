@@ -38,7 +38,7 @@ type statisticFunc struct {
 
 func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 string) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
-	s := flag.Int("bs", 1, "Number of repeated simulations")
+	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
 	sl := flag.Float64("sig", 0.05, "Significance level")
 	flag.Parse()
 
