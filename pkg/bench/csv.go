@@ -43,9 +43,9 @@ func FromCSV(ctx context.Context, r io.Reader) (Chan, error) {
 	if err != nil {
 		if err == io.EOF {
 			go func() {
+				defer close(c)
 				c <- ExecutionValue{Type: ExecStart}
 				c <- ExecutionValue{Type: ExecEnd}
-				close(c)
 			}()
 			return c, nil
 		}
@@ -53,6 +53,8 @@ func FromCSV(ctx context.Context, r io.Reader) (Chan, error) {
 	}
 
 	go func() {
+		defer close(c)
+
 		var first *InvocationsFlat
 		ev := ExecutionValue{Type: ExecStart}
 		var cnt int
@@ -69,8 +71,6 @@ func FromCSV(ctx context.Context, r io.Reader) (Chan, error) {
 			}
 			cnt++
 		}
-
-		close(c)
 	}()
 
 	return c, nil

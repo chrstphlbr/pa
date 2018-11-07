@@ -14,6 +14,7 @@ type CIResult struct {
 func CIs(c bench.Chan, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) <-chan CIResult {
 	res := make(chan CIResult)
 	go func() {
+		defer close(res)
 		for br := range c {
 			switch br.Type {
 			case bench.ExecError:
@@ -27,7 +28,6 @@ func CIs(c bench.Chan, iters int, nrWorkers int, statFunc stat.StatisticFunc, si
 				}
 			}
 		}
-		close(res)
 	}()
 	return res
 }
