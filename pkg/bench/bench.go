@@ -34,13 +34,6 @@ func (b *B) AddPerfParam(param, value string) {
 	}
 }
 
-func (b *B) PerfParam(param string) (string, bool) {
-	b.perfParamLock.RLock()
-	defer b.perfParamLock.RUnlock()
-	v, ok := b.perfParams[param]
-	return v, ok
-}
-
 func (b *B) PerfParams() map[string]string {
 	b.perfParamLock.RLock()
 	defer b.perfParamLock.RUnlock()
