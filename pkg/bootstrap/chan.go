@@ -6,28 +6,28 @@ import (
 )
 
 type CIResult struct {
-	Benchmark bench.B
+	Benchmark *bench.B
 	CI        stat.CI
 	Err       error
 }
 
 func CIs(c bench.Chan, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) <-chan CIResult {
-	res := make(chan CIResult)
+	out := make(chan CIResult)
 	go func() {
-		defer close(res)
+		defer close(out)
 		for br := range c {
 			switch br.Type {
 			case bench.ExecError:
-				res <- CIResult{
+				out <- CIResult{
 					Err: br.Err,
 				}
 			case bench.ExecNext:
-				res <- CIResult{
+				out <- CIResult{
 					Benchmark: br.Exec.Benchmark,
 					CI:        CI(iters, nrWorkers, statFunc, br.Exec, significanceLevel),
 				}
 			}
 		}
 	}()
-	return res
+	return out
 }

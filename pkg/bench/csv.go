@@ -144,10 +144,10 @@ func parseExecution(cr *csv.Reader, first *InvocationsFlat) (ExecutionValue, *In
 }
 
 func csvBenchExec(rec []string) (*InvocationsFlat, error) {
-	// project;commit;benchmark;params;instance;trial;fork;iteration;mode;unit;value_count;value
+	b := New(rec[2])
+	b.FunctionParams = make([]string, 0)
 
 	// params
-	ps := make(map[string]string)
 	if rawps := rec[3]; rawps != "" {
 		rawpsSplitted := strings.Split(rawps, ",")
 		for _, rawp := range rawpsSplitted {
@@ -155,9 +155,11 @@ func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 			if len(p) != 2 {
 				return nil, fmt.Errorf("Invalid JMH parameter: %s", rawp)
 			}
-			ps[p[0]] = p[1]
+			b.AddPerfParam(p[0], p[1])
 		}
 	}
+
+	// project;commit;benchmark;params;instance;trial;fork;iteration;mode;unit;value_count;value
 
 	// trial
 	t, err := strconv.Atoi(rec[5])
@@ -195,11 +197,7 @@ func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 	}
 
 	return &InvocationsFlat{
-		Benchmark: B{
-			Name:           rec[2],
-			PerfParams:     ps,
-			FunctionParams: make([]string, 0),
-		},
+		Benchmark:   b,
 		Instance:    rec[4],
 		Trial:       t,
 		Fork:        f,

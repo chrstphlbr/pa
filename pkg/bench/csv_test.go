@@ -151,7 +151,7 @@ func TestFromCSVSingleInvs(t *testing.T) {
 	checkInstance(t, es[0], "i1", 1, 1, 1, 1, 1, 1)
 }
 
-func writeInvocations(t *testing.T, w *csv.Writer, b bench.B, ins string, trial, fork, iter, nrinvs int) {
+func writeInvocations(t *testing.T, w *csv.Writer, b *bench.B, ins string, trial, fork, iter, nrinvs int) {
 	invs := createInvocationsFlat(nrinvs, b, ins, trial, fork, iter)
 	for _, inv := range invs.Invocations {
 		//[]string{"project", "commit", "benchmark", "params", "instance", "trial", "fork", "iteration", "mode", "unit", "value_count", "value"}
@@ -181,9 +181,7 @@ func fromCSVMultiInvs(t *testing.T, nrbs, nrins, nrtrials, nrforks, nriters, nri
 
 	// write CSV
 	for b := 1; b <= nrbs; b++ {
-		bench := bench.B{
-			Name: fmt.Sprintf("b%d", b),
-		}
+		bench := bench.New(fmt.Sprintf("b%d", b))
 		benchsChecked[bench.Name] = false
 		for i := 1; i <= nrins; i++ {
 			instance := fmt.Sprintf("i%d", i)

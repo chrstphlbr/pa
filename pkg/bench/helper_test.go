@@ -34,7 +34,7 @@ func createInvocations(count int) bench.Invocations {
 	return is
 }
 
-func createInvocationsFlatGenerator(count int, b bench.B, ins string, t, f, i int, invGen invGen) bench.InvocationsFlat {
+func createInvocationsFlatGenerator(count int, b *bench.B, ins string, t, f, i int, invGen invGen) bench.InvocationsFlat {
 	is := invGen(count)
 
 	return bench.InvocationsFlat{
@@ -47,11 +47,11 @@ func createInvocationsFlatGenerator(count int, b bench.B, ins string, t, f, i in
 	}
 }
 
-func createInvocationsFlat(count int, b bench.B, ins string, t, f, i int) bench.InvocationsFlat {
+func createInvocationsFlat(count int, b *bench.B, ins string, t, f, i int) bench.InvocationsFlat {
 	return createInvocationsFlatGenerator(count, b, ins, t, f, i, createInvocations)
 }
 
-func createRandomInvocationsFlat(count int, b bench.B, ins string, t, f, i int) bench.InvocationsFlat {
+func createRandomInvocationsFlat(count int, b *bench.B, ins string, t, f, i int) bench.InvocationsFlat {
 	return createInvocationsFlatGenerator(count, b, ins, t, f, i, createRandomInvocations)
 }
 

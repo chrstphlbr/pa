@@ -30,7 +30,7 @@ type ArraySizes struct {
 }
 
 type InvocationsFlat struct {
-	Benchmark   B
+	Benchmark   *B
 	Instance    string
 	Trial       int
 	Fork        int
@@ -70,7 +70,7 @@ func NewInstanceTrialSize(id string, ts int) *Instance {
 }
 
 type Execution struct {
-	Benchmark      B
+	Benchmark      *B
 	Instances      map[InstanceID]*Instance
 	arraySizes     ArraySizes
 	indexStartsAt1 bool
@@ -78,15 +78,15 @@ type Execution struct {
 	len            int
 }
 
-func NewExecution(b B) *Execution {
+func NewExecution(b *B) *Execution {
 	return NewExecutionWithIndexAndDefaults(b, true, defaultArraySizes)
 }
 
-func NewExecutionWithIndex(b B, idxAt1 bool) *Execution {
+func NewExecutionWithIndex(b *B, idxAt1 bool) *Execution {
 	return NewExecutionWithIndexAndDefaults(b, idxAt1, defaultArraySizes)
 }
 
-func NewExecutionWithIndexAndDefaults(b B, idxAt1 bool, d ArraySizes) *Execution {
+func NewExecutionWithIndexAndDefaults(b *B, idxAt1 bool, d ArraySizes) *Execution {
 	return &Execution{
 		Benchmark:      b,
 		Instances:      make(map[InstanceID]*Instance),

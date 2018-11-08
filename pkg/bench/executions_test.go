@@ -7,17 +7,13 @@ import (
 	"bitbucket.org/sealuzh/pa/pkg/bench"
 )
 
-var b = bench.B{
-	Name:           "benchA",
-	FunctionParams: []string{},
-	PerfParams:     map[string]string{},
+func createBench(name string) *bench.B {
+	return bench.New(name)
 }
 
-var b2 = bench.B{
-	Name:           "benchB",
-	FunctionParams: []string{},
-	PerfParams:     map[string]string{},
-}
+var b = createBench("benchA")
+
+var b2 = createBench("benchB")
 
 func TestNewExecutionSameBenchmark(t *testing.T) {
 	e := bench.NewExecution(b)

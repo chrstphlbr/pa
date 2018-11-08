@@ -134,7 +134,7 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 
 		b := res.Benchmark
 		ci := res.CI
-		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
+		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams(), ci.Lower, ci.Upper, ci.Level)
 	}
 }
 
