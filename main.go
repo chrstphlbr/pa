@@ -118,11 +118,16 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 	f, err := os.Open(fp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open file '%s'", fp)
+		return
 	}
 
-	c, err := bench.FromCSV(context.Background(), f)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c, err := bench.FromCSV(ctx, f)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v", err)
+		return
 	}
 
 	rc := bootstrap.CIs(c, sim, nrWorkers, sf, sigLev)
@@ -139,5 +144,39 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 }
 
 func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2 string) {
-	panic("Not implemented")
+	f1, err := os.Open(fp1)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open file1 '%s'", fp1)
+	}
+
+	f2, err := os.Open(fp2)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not open file2 '%s'", fp2)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	c1, err := bench.FromCSV(ctx, f1)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+	}
+
+	c2, err := bench.FromCSV(ctx, f2)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+	}
+
+	rc := bootstrap.CIRatios(c1, c2, sim, nrWorkers, sf, sigLev)
+
+	for res := range rc {
+		if res.Err != nil {
+			fmt.Fprintf(os.Stderr, "Error while retrieving CI result: %v", res.Err)
+			return
+		}
+
+		b := res.Benchmark
+		cir := res.CIRatio
+		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%e;%e;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams(), cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Lower, cir.CIB.Upper, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level)
+	}
 }
