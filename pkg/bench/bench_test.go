@@ -1,384 +1,102 @@
 package bench_test
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"bitbucket.org/sealuzh/pa/pkg/bench"
 )
 
-func TestBEqualsUnset(t *testing.T) {
-	b1 := bench.New("")
-	b2 := bench.New("")
-
-	if !b1.Equals(b2) {
-		t.Fail()
+func TestBNewEmpty(t *testing.T) {
+	b := bench.New("b")
+	if b.Name != "b" {
+		t.Fatalf("Invalid B.Name")
+	}
+	if len(b.FunctionParams) != 0 {
+		t.Fatalf("FunctionParams not 0")
+	}
+	if len(b.PerfParamKeys()) != 0 {
+		t.Fatalf("PerfParamKeys not 0")
+	}
+	if len(b.PerfParams()) != 0 {
+		t.Fatalf("PerfParams not 0")
 	}
 }
 
-// Name
+func TestBAddPerfParam(t *testing.T) {
+	b := bench.New("b")
+	for i := 0; i < 10; i++ {
+		b.AddPerfParam(fmt.Sprintf("p%d", i), fmt.Sprintf("v%d", i))
+		el := i + 1
 
-func TestBEqualsB1NameB2Unset(t *testing.T) {
-	b1 := bench.New("b1")
-	b2 := bench.New("")
+		// integrety checks
+		if b.Name != "b" {
+			t.Fatalf("Name has changed from 'b' to '%s'", b.Name)
+		}
+		if lfp := len(b.FunctionParams); lfp != 0 {
+			t.Fatalf("FunctionParams length has changed from %d to %d", 0, lfp)
+		}
 
-	if b1.Equals(b2) {
-		t.Fail()
+		// check keys and values
+		keys := b.PerfParamKeys()
+		lppk := len(keys)
+		if lppk != el {
+			t.Fatalf("PerfParamKeys length invalid: expected %d, was %d", el, lppk)
+		}
+
+		params := b.PerfParams()
+		lpp := len(params)
+		if lpp != el {
+			t.Fatalf("PerfParams length invalid: expected %d, was %d", el, lppk)
+		}
+
+		for j := 0; j <= i; j++ {
+			key := keys[j]
+			if e := fmt.Sprintf("p%d", j); key != e {
+				t.Fatalf("Invalid key: expected '%s', was '%s'", e, key)
+			}
+
+			v, ok := params[key]
+			if !ok {
+				t.Fatalf("PerfPram (key = '%s') not in benchmark", key)
+			}
+
+			if e := fmt.Sprintf("v%d", j); v != e {
+				t.Fatalf("Invalid value for '%s': expected '%s', was '%s'", key, e, v)
+			}
+		}
 	}
 }
 
-func TestBEqualsB1UnsetB2Name(t *testing.T) {
-	b1 := bench.New("")
-	b2 := bench.New("b2")
+func TestBAddPerfParamSorted(t *testing.T) {
+	b := bench.New("b")
 
-	if b1.Equals(b2) {
-		t.Fail()
+	random := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+	// create random order of elements
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	for n := len(random); n > 0; n-- {
+		randIndex := r.Intn(n)
+		random[n-1], random[randIndex] = random[randIndex], random[n-1]
 	}
-}
 
-func TestBEqualsB1NameB2NameEqual(t *testing.T) {
-	b1 := bench.New("b1")
-	b2 := bench.New("b1")
-
-	if !b1.Equals(b2) {
-		t.Fail()
+	for _, v := range random {
+		b.AddPerfParam(fmt.Sprintf("p%d", v), fmt.Sprintf("v%d", v))
 	}
-}
 
-func TestBEqualsB1NameB2NameUnequal(t *testing.T) {
-	b1 := bench.New("b1")
-
-	b2 := bench.New("b2")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-// FunctionParams
-
-func TestBEqualsB1FPB2Unset(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1"}
-	b2 := bench.New("")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1UnsetB2FP(t *testing.T) {
-	b1 := bench.New("")
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p1"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1FPB2FPEqual(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1"}
-
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p1"}
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1FPB2FPUnequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1"}
-
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p2"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1FP2B2FP2Equal(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1", "p2"}
-
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p1", "p2"}
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1FP2B2FP2Unequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1", "p2"}
-
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p2", "p1"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1FP2B2FPUnequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1", "p2"}
-
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p2"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1FPB2FP2Unequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.FunctionParams = []string{"p1"}
-
-	b2 := bench.New("")
-	b2.FunctionParams = []string{"p1", "p2"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-// PerfParams
-
-func TestBEqualsB1PPB2Unset(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1UnsetB2PP(t *testing.T) {
-	b1 := bench.New("")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1PPB2PPEqual(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1PPB2PPUnequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp2", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1PP2B2PPUnequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1PPB2PP2Unequal(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-	b2.AddPerfParam("pp2", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1PP2B2PP2Equal(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp2", "ppv1")
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-	b2.AddPerfParam("pp2", "ppv1")
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsB1PP2B2PP2Equal2(t *testing.T) {
-	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
-
-	b2 := bench.New("")
-	b2.AddPerfParam("pp2", "ppv1")
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-// complex
-
-func TestBEqualsSameNameSameFP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1", "p2"}
-
-	b2 := bench.New("b1")
-	b2.FunctionParams = []string{"p1", "p2"}
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsSameNameDifferentFP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1", "p2"}
-
-	b2 := bench.New("b1")
-	b2.FunctionParams = []string{"p1"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsSameNameSamePP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
-
-	b2 := bench.New("b1")
-	b2.AddPerfParam("pp1", "ppv1")
-	b2.AddPerfParam("pp2", "ppv1")
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsSameNameDifferentPP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
-
-	b2 := bench.New("b1")
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsDifferntNameSameFP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1", "p2"}
-
-	b2 := bench.New("b2")
-	b2.FunctionParams = []string{"p1", "p2"}
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsDifferentNameSamePP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("b2")
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsSameNameSameFPSamePP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1", "p2"}
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("b1")
-	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if !b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsSameNameSameFPDifferentPP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1", "p2"}
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("b1")
-	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp2", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsSameNameDifferentFPSamePP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1"}
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("b1")
-	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
-	}
-}
-
-func TestBEqualsDifferentNameSameFPSamePP(t *testing.T) {
-	b1 := bench.New("b1")
-	b1.FunctionParams = []string{"p1", "p2"}
-	b1.AddPerfParam("pp1", "ppv1")
-
-	b2 := bench.New("b2")
-	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp1", "ppv1")
-
-	if b1.Equals(b2) {
-		t.Fail()
+	keys := b.PerfParamKeys()
+	params := b.PerfParams()
+	for i, key := range keys {
+		// check key
+		if e := fmt.Sprintf("p%d", i); key != e {
+			t.Fatalf("Invalid key: expected '%s', was '%s'", e, key)
+		}
+		// check value
+		v := params[key]
+		if e := fmt.Sprintf("v%d", i); v != e {
+			t.Fatalf("Invalid value: expected '%s', was '%s'", e, v)
+		}
 	}
 }
