@@ -153,7 +153,7 @@ func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 		for _, rawp := range rawpsSplitted {
 			p := strings.Split(rawp, "=")
 			if len(p) != 2 {
-				return nil, fmt.Errorf("Invalid JMH parameter: %s", rawp)
+				return nil, fmt.Errorf("Invalid JMH parameter (%s): '%s'", b.Name, rawp)
 			}
 			b.PerfParams.Add(p[0], p[1])
 		}

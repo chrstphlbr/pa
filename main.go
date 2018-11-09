@@ -171,7 +171,7 @@ func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2
 
 	for res := range rc {
 		if res.Err != nil {
-			fmt.Fprintf(os.Stderr, "Error while retrieving CI result: %v", res.Err)
+			fmt.Fprintf(os.Stderr, "Error while retrieving CI result: %v\n", res.Err)
 			return
 		}
 
