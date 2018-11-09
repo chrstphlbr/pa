@@ -145,7 +145,7 @@ func parseExecution(cr *csv.Reader, first *InvocationsFlat) (ExecutionValue, *In
 
 func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 	b := New(rec[2])
-	b.FunctionParams = make([]string, 0)
+	b.FunctionParams = make(FunctionParams, 0)
 
 	// params
 	if rawps := rec[3]; rawps != "" {
@@ -155,7 +155,7 @@ func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 			if len(p) != 2 {
 				return nil, fmt.Errorf("Invalid JMH parameter: %s", rawp)
 			}
-			b.AddPerfParam(p[0], p[1])
+			b.PerfParams.Add(p[0], p[1])
 		}
 	}
 

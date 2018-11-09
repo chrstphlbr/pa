@@ -139,7 +139,7 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 
 		b := res.Benchmark
 		ci := res.CI
-		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams(), ci.Lower, ci.Upper, ci.Level)
+		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
 	}
 }
 
@@ -177,6 +177,6 @@ func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2
 
 		b := res.Benchmark
 		cir := res.CIRatio
-		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams(), cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level, cir.CIA.Lower, cir.CIB.Upper, cir.CIB.Level, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level)
+		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level, cir.CIA.Lower, cir.CIB.Upper, cir.CIB.Level, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level)
 	}
 }

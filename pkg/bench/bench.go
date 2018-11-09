@@ -3,47 +3,22 @@ package bench
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 )
 
 type B struct {
 	Name           string
-	FunctionParams []string
-	perfParamLock  sync.RWMutex
-	perfParamKeys  []string
-	perfParams     map[string]string
+	FunctionParams FunctionParams
+	PerfParams     *PerfParams
 }
 
 func New(name string) *B {
 	return &B{
 		Name:           name,
 		FunctionParams: []string{},
-		perfParamKeys:  []string{},
-		perfParams:     map[string]string{},
+		PerfParams:     newPerfParams(),
 	}
-}
-
-func (b *B) AddPerfParam(param, value string) {
-	b.perfParamLock.Lock()
-	defer b.perfParamLock.Unlock()
-	b.perfParamKeys = append(b.perfParamKeys, param)
-	sort.Strings(b.perfParamKeys)
-	b.perfParams[param] = value
-	if len(b.perfParamKeys) != len(b.perfParams) {
-		panic(fmt.Sprintf("Illegal state for %s %v: performance-parameter data structures out of sync", b.Name, b.FunctionParams))
-	}
-}
-
-func (b *B) PerfParams() map[string]string {
-	b.perfParamLock.RLock()
-	defer b.perfParamLock.RUnlock()
-	return b.perfParams
-}
-
-func (b *B) PerfParamKeys() []string {
-	b.perfParamLock.RLock()
-	defer b.perfParamLock.RUnlock()
-	return b.perfParamKeys
 }
 
 func (b *B) Equals(other *B) bool {
@@ -83,13 +58,13 @@ func (b *B) Compare(other *B) int {
 
 	// FunctionParams are equal
 
-	b.perfParamLock.RLock()
-	defer b.perfParamLock.RUnlock()
-	other.perfParamLock.RLock()
-	defer other.perfParamLock.RUnlock()
+	b.PerfParams.l.RLock()
+	defer b.PerfParams.l.RUnlock()
+	other.PerfParams.l.RLock()
+	defer other.PerfParams.l.RUnlock()
 
-	ppKeys := b.perfParamKeys
-	oppKeys := other.perfParamKeys
+	ppKeys := b.PerfParams.keys
+	oppKeys := other.PerfParams.keys
 	lpp := len(ppKeys)
 	lopp := len(oppKeys)
 	if lpp < lopp {
@@ -109,11 +84,11 @@ func (b *B) Compare(other *B) int {
 		}
 
 		// compare values
-		bval, ok := b.perfParams[bkey]
+		bval, ok := b.PerfParams.params[bkey]
 		if !ok {
 			panic(fmt.Sprintf("Illegal state for %s %v: performance-parameter data structures out of sync", b.Name, b.FunctionParams))
 		}
-		oval, ok := other.perfParams[okey]
+		oval, ok := other.PerfParams.params[okey]
 		if !ok {
 			panic(fmt.Sprintf("Illegal state for %s %v: performance-parameter data structures out of sync", other.Name, other.FunctionParams))
 		}
@@ -126,4 +101,84 @@ func (b *B) Compare(other *B) int {
 	}
 
 	return 0
+}
+
+type FunctionParams []string
+
+func (fp FunctionParams) String() string {
+	var sb strings.Builder
+
+	first := true
+	for _, p := range fp {
+		if first {
+			first = false
+		} else {
+			sb.WriteString(",")
+		}
+		sb.WriteString(p)
+	}
+
+	return sb.String()
+}
+
+type PerfParams struct {
+	l      sync.RWMutex
+	keys   []string
+	params map[string]string
+}
+
+func newPerfParams() *PerfParams {
+	return &PerfParams{
+		keys:   []string{},
+		params: map[string]string{},
+	}
+}
+
+func (pp *PerfParams) Add(param, value string) {
+	pp.l.Lock()
+	defer pp.l.Unlock()
+	pp.keys = append(pp.keys, param)
+	sort.Strings(pp.keys)
+	pp.params[param] = value
+	if len(pp.keys) != len(pp.params) {
+		panic(fmt.Sprintf("Illegal state for: performance-parameter data structures out of sync"))
+	}
+}
+
+func (pp *PerfParams) Get() map[string]string {
+	pp.l.RLock()
+	defer pp.l.RUnlock()
+	return pp.params
+}
+
+func (pp *PerfParams) Keys() []string {
+	pp.l.RLock()
+	defer pp.l.RUnlock()
+	return pp.keys
+}
+
+func (pp PerfParams) String() string {
+	pp.l.RLock()
+	defer pp.l.RUnlock()
+	var sb strings.Builder
+
+	first := true
+	for _, k := range pp.keys {
+		v, ok := pp.params[k]
+		if !ok {
+			panic(fmt.Sprintf("Illegal state for: performance-parameter data structures out of sync"))
+		}
+
+		if first {
+			first = false
+		} else {
+			sb.WriteString(",")
+		}
+
+		sb.WriteString(k)
+		sb.WriteString("=")
+		sb.WriteString(v)
+	}
+
+	return sb.String()
 }

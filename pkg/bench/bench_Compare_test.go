@@ -25,9 +25,9 @@ func TestBCompareEqualFunctionParams(t *testing.T) {
 
 func TestBCompareEqualPerfParams(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("p1", "v1")
-	b1.AddPerfParam("p2", "v2")
-	b1.AddPerfParam("p3", "v3")
+	b1.PerfParams.Add("p1", "v1")
+	b1.PerfParams.Add("p2", "v2")
+	b1.PerfParams.Add("p3", "v3")
 
 	if b1.Compare(b1) != 0 {
 		t.Fatalf("Should be 0")
@@ -37,9 +37,9 @@ func TestBCompareEqualPerfParams(t *testing.T) {
 func TestBCompareEqualAll(t *testing.T) {
 	b1 := bench.New("b1")
 	b1.FunctionParams = []string{"a", "b", "c"}
-	b1.AddPerfParam("p1", "v1")
-	b1.AddPerfParam("p2", "v2")
-	b1.AddPerfParam("p3", "v3")
+	b1.PerfParams.Add("p1", "v1")
+	b1.PerfParams.Add("p2", "v2")
+	b1.PerfParams.Add("p3", "v3")
 
 	if b1.Compare(b1) != 0 {
 		t.Fatalf("Should be 0")
@@ -78,9 +78,9 @@ func TestBCompareSmallerFunctionParamsElem(t *testing.T) {
 func TestBCompareSmallerPerfParamsLen(t *testing.T) {
 	b1 := bench.New("b1")
 	b2 := bench.New("b1")
-	b2.AddPerfParam("p1", "v1")
-	b2.AddPerfParam("p2", "v2")
-	b2.AddPerfParam("p3", "v3")
+	b2.PerfParams.Add("p1", "v1")
+	b2.PerfParams.Add("p2", "v2")
+	b2.PerfParams.Add("p3", "v3")
 	if c := b1.Compare(b2); c != -1 {
 		t.Fatalf("Expected %d, was %d", -1, c)
 	}
@@ -88,13 +88,13 @@ func TestBCompareSmallerPerfParamsLen(t *testing.T) {
 
 func TestBCompareSmallerPerfParamsKey(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("p2", "v1")
-	b1.AddPerfParam("p3", "v2")
-	b1.AddPerfParam("p6", "v3")
+	b1.PerfParams.Add("p2", "v1")
+	b1.PerfParams.Add("p3", "v2")
+	b1.PerfParams.Add("p6", "v3")
 	b2 := bench.New("b1")
-	b2.AddPerfParam("p2", "v1")
-	b2.AddPerfParam("p4", "v2")
-	b2.AddPerfParam("p6", "v3")
+	b2.PerfParams.Add("p2", "v1")
+	b2.PerfParams.Add("p4", "v2")
+	b2.PerfParams.Add("p6", "v3")
 	if c := b1.Compare(b2); c != -1 {
 		t.Fatalf("Expected %d, was %d", -1, c)
 	}
@@ -102,13 +102,13 @@ func TestBCompareSmallerPerfParamsKey(t *testing.T) {
 
 func TestBCompareSmallerPerfParamsValue(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("p1", "v1")
-	b1.AddPerfParam("p2", "v1")
-	b1.AddPerfParam("p3", "v3")
+	b1.PerfParams.Add("p1", "v1")
+	b1.PerfParams.Add("p2", "v1")
+	b1.PerfParams.Add("p3", "v3")
 	b2 := bench.New("b1")
-	b2.AddPerfParam("p1", "v1")
-	b2.AddPerfParam("p2", "v2")
-	b2.AddPerfParam("p3", "v3")
+	b2.PerfParams.Add("p1", "v1")
+	b2.PerfParams.Add("p2", "v2")
+	b2.PerfParams.Add("p3", "v3")
 	if c := b1.Compare(b2); c != -1 {
 		t.Fatalf("Expected %d, was %d", -1, c)
 	}
@@ -145,9 +145,9 @@ func TestBCompareBiggerFunctionParamsElem(t *testing.T) {
 
 func TestBCompareBiggerPerfParamsLen(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("p1", "v1")
-	b1.AddPerfParam("p2", "v2")
-	b1.AddPerfParam("p3", "v3")
+	b1.PerfParams.Add("p1", "v1")
+	b1.PerfParams.Add("p2", "v2")
+	b1.PerfParams.Add("p3", "v3")
 	b2 := bench.New("b1")
 	if c := b1.Compare(b2); c != 1 {
 		t.Fatalf("Expected %d, was %d", 1, c)
@@ -156,13 +156,13 @@ func TestBCompareBiggerPerfParamsLen(t *testing.T) {
 
 func TestBCompareBiggerPerfParamsKey(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("p2", "v1")
-	b1.AddPerfParam("p4", "v2")
-	b1.AddPerfParam("p6", "v3")
+	b1.PerfParams.Add("p2", "v1")
+	b1.PerfParams.Add("p4", "v2")
+	b1.PerfParams.Add("p6", "v3")
 	b2 := bench.New("b1")
-	b2.AddPerfParam("p2", "v1")
-	b2.AddPerfParam("p3", "v2")
-	b2.AddPerfParam("p6", "v3")
+	b2.PerfParams.Add("p2", "v1")
+	b2.PerfParams.Add("p3", "v2")
+	b2.PerfParams.Add("p6", "v3")
 	if c := b1.Compare(b2); c != 1 {
 		t.Fatalf("Expected %d, was %d", 1, c)
 	}
@@ -170,13 +170,13 @@ func TestBCompareBiggerPerfParamsKey(t *testing.T) {
 
 func TestBCompareBiggerPerfParamsValue(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("p1", "v1")
-	b1.AddPerfParam("p2", "v2")
-	b1.AddPerfParam("p3", "v3")
+	b1.PerfParams.Add("p1", "v1")
+	b1.PerfParams.Add("p2", "v2")
+	b1.PerfParams.Add("p3", "v3")
 	b2 := bench.New("b1")
-	b2.AddPerfParam("p1", "v1")
-	b2.AddPerfParam("p2", "v1")
-	b2.AddPerfParam("p3", "v3")
+	b2.PerfParams.Add("p1", "v1")
+	b2.PerfParams.Add("p2", "v1")
+	b2.PerfParams.Add("p3", "v3")
 	if c := b1.Compare(b2); c != 1 {
 		t.Fatalf("Expected %d, was %d", 1, c)
 	}

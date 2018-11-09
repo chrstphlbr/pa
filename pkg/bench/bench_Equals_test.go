@@ -152,7 +152,7 @@ func TestBEqualsB1FPB2FP2Unequal(t *testing.T) {
 
 func TestBEqualsB1PPB2Unset(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("")
 
@@ -165,7 +165,7 @@ func TestBEqualsB1UnsetB2PP(t *testing.T) {
 	b1 := bench.New("")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -174,10 +174,10 @@ func TestBEqualsB1UnsetB2PP(t *testing.T) {
 
 func TestBEqualsB1PPB2PPEqual(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if !b1.Equals(b2) {
 		t.Fail()
@@ -186,10 +186,10 @@ func TestBEqualsB1PPB2PPEqual(t *testing.T) {
 
 func TestBEqualsB1PPB2PPUnequal(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp2", "ppv1")
+	b2.PerfParams.Add("pp2", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -198,11 +198,11 @@ func TestBEqualsB1PPB2PPUnequal(t *testing.T) {
 
 func TestBEqualsB1PP2B2PPUnequal(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
+	b1.PerfParams.Add("pp2", "ppv1")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -211,11 +211,11 @@ func TestBEqualsB1PP2B2PPUnequal(t *testing.T) {
 
 func TestBEqualsB1PPB2PP2Unequal(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-	b2.AddPerfParam("pp2", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
+	b2.PerfParams.Add("pp2", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -224,12 +224,12 @@ func TestBEqualsB1PPB2PP2Unequal(t *testing.T) {
 
 func TestBEqualsB1PP2B2PP2Equal(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp2", "ppv1")
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp2", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp1", "ppv1")
-	b2.AddPerfParam("pp2", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
+	b2.PerfParams.Add("pp2", "ppv1")
 
 	if !b1.Equals(b2) {
 		t.Fail()
@@ -238,12 +238,12 @@ func TestBEqualsB1PP2B2PP2Equal(t *testing.T) {
 
 func TestBEqualsB1PP2B2PP2Equal2(t *testing.T) {
 	b1 := bench.New("")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
+	b1.PerfParams.Add("pp2", "ppv1")
 
 	b2 := bench.New("")
-	b2.AddPerfParam("pp2", "ppv1")
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp2", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if !b1.Equals(b2) {
 		t.Fail()
@@ -278,12 +278,12 @@ func TestBEqualsSameNameDifferentFP(t *testing.T) {
 
 func TestBEqualsSameNameSamePP(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
+	b1.PerfParams.Add("pp2", "ppv1")
 
 	b2 := bench.New("b1")
-	b2.AddPerfParam("pp1", "ppv1")
-	b2.AddPerfParam("pp2", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
+	b2.PerfParams.Add("pp2", "ppv1")
 
 	if !b1.Equals(b2) {
 		t.Fail()
@@ -292,11 +292,11 @@ func TestBEqualsSameNameSamePP(t *testing.T) {
 
 func TestBEqualsSameNameDifferentPP(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("pp1", "ppv1")
-	b1.AddPerfParam("pp2", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
+	b1.PerfParams.Add("pp2", "ppv1")
 
 	b2 := bench.New("b1")
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -317,10 +317,10 @@ func TestBEqualsDifferntNameSameFP(t *testing.T) {
 
 func TestBEqualsDifferentNameSamePP(t *testing.T) {
 	b1 := bench.New("b1")
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("b2")
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -330,11 +330,11 @@ func TestBEqualsDifferentNameSamePP(t *testing.T) {
 func TestBEqualsSameNameSameFPSamePP(t *testing.T) {
 	b1 := bench.New("b1")
 	b1.FunctionParams = []string{"p1", "p2"}
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("b1")
 	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if !b1.Equals(b2) {
 		t.Fail()
@@ -344,11 +344,11 @@ func TestBEqualsSameNameSameFPSamePP(t *testing.T) {
 func TestBEqualsSameNameSameFPDifferentPP(t *testing.T) {
 	b1 := bench.New("b1")
 	b1.FunctionParams = []string{"p1", "p2"}
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("b1")
 	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp2", "ppv1")
+	b2.PerfParams.Add("pp2", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -358,11 +358,11 @@ func TestBEqualsSameNameSameFPDifferentPP(t *testing.T) {
 func TestBEqualsSameNameDifferentFPSamePP(t *testing.T) {
 	b1 := bench.New("b1")
 	b1.FunctionParams = []string{"p1"}
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("b1")
 	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()
@@ -372,11 +372,11 @@ func TestBEqualsSameNameDifferentFPSamePP(t *testing.T) {
 func TestBEqualsDifferentNameSameFPSamePP(t *testing.T) {
 	b1 := bench.New("b1")
 	b1.FunctionParams = []string{"p1", "p2"}
-	b1.AddPerfParam("pp1", "ppv1")
+	b1.PerfParams.Add("pp1", "ppv1")
 
 	b2 := bench.New("b2")
 	b2.FunctionParams = []string{"p1", "p2"}
-	b2.AddPerfParam("pp1", "ppv1")
+	b2.PerfParams.Add("pp1", "ppv1")
 
 	if b1.Equals(b2) {
 		t.Fail()

@@ -17,10 +17,10 @@ func TestBNewEmpty(t *testing.T) {
 	if len(b.FunctionParams) != 0 {
 		t.Fatalf("FunctionParams not 0")
 	}
-	if len(b.PerfParamKeys()) != 0 {
-		t.Fatalf("PerfParamKeys not 0")
+	if len(b.PerfParams.Keys()) != 0 {
+		t.Fatalf("PerfParams.Keys not 0")
 	}
-	if len(b.PerfParams()) != 0 {
+	if len(b.PerfParams.Get()) != 0 {
 		t.Fatalf("PerfParams not 0")
 	}
 }
@@ -28,7 +28,7 @@ func TestBNewEmpty(t *testing.T) {
 func TestBAddPerfParam(t *testing.T) {
 	b := bench.New("b")
 	for i := 0; i < 10; i++ {
-		b.AddPerfParam(fmt.Sprintf("p%d", i), fmt.Sprintf("v%d", i))
+		b.PerfParams.Add(fmt.Sprintf("p%d", i), fmt.Sprintf("v%d", i))
 		el := i + 1
 
 		// integrety checks
@@ -40,13 +40,13 @@ func TestBAddPerfParam(t *testing.T) {
 		}
 
 		// check keys and values
-		keys := b.PerfParamKeys()
+		keys := b.PerfParams.Keys()
 		lppk := len(keys)
 		if lppk != el {
-			t.Fatalf("PerfParamKeys length invalid: expected %d, was %d", el, lppk)
+			t.Fatalf("PerfParams.Keys length invalid: expected %d, was %d", el, lppk)
 		}
 
-		params := b.PerfParams()
+		params := b.PerfParams.Get()
 		lpp := len(params)
 		if lpp != el {
 			t.Fatalf("PerfParams length invalid: expected %d, was %d", el, lppk)
@@ -83,11 +83,11 @@ func TestBAddPerfParamSorted(t *testing.T) {
 	}
 
 	for _, v := range random {
-		b.AddPerfParam(fmt.Sprintf("p%d", v), fmt.Sprintf("v%d", v))
+		b.PerfParams.Add(fmt.Sprintf("p%d", v), fmt.Sprintf("v%d", v))
 	}
 
-	keys := b.PerfParamKeys()
-	params := b.PerfParams()
+	keys := b.PerfParams.Keys()
+	params := b.PerfParams.Get()
 	for i, key := range keys {
 		// check key
 		if e := fmt.Sprintf("p%d", i); key != e {
