@@ -199,7 +199,7 @@ func fromCSVMultiInvs(t *testing.T, nrbs, nrins, nrtrials, nrforks, nriters, nri
 	}
 
 	sr := strings.NewReader(sb.String())
-	es, err := fromCSVHelper(t, sr, 2, false)
+	es, err := fromCSVHelper(t, sr, nrbs, false)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -207,7 +207,6 @@ func fromCSVMultiInvs(t *testing.T, nrbs, nrins, nrtrials, nrforks, nriters, nri
 	// printExecutions(es)
 
 	for _, e := range es {
-		// fmt.Println(e)
 		_, shouldBeThere := benchsChecked[e.Benchmark.Name]
 		if shouldBeThere {
 			benchsChecked[e.Benchmark.Name] = true

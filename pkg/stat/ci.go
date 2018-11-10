@@ -10,8 +10,8 @@ import (
 )
 
 type StatisticFunc func([]float64) float64
-type CIFunc = func(*bench.Execution, StatisticFunc, float64) CI
-type CIRatioFunc = func(*bench.Execution, *bench.Execution, StatisticFunc, float64) CIRatio
+type CIFunc = func(bench.ExecutionSlice, StatisticFunc, float64) CI
+type CIRatioFunc = func(bench.ExecutionSlice, bench.ExecutionSlice, StatisticFunc, float64) CIRatio
 
 type CI struct {
 	Lower float64

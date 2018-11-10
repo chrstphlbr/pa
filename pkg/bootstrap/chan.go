@@ -70,15 +70,19 @@ func CIRatios(c1, c2 bench.Chan, iters int, nrWorkers int, statFunc stat.Statist
 					ev2v, ok2v := <-c2
 					ev2 = &ev2v
 					ok2 = ok2v
+					// fmt.Fprintf(os.Stderr, "leftOver1: %v  %t\n\t%v  %t\n", ev1, ok1, ev2, ok2)
 				} else if leftOver.cnr == cNr2 {
 					ev2 = leftOver.ev
 					ok2 = true
 					ev1v, ok1v := <-c1
 					ev1 = &ev1v
 					ok1 = ok1v
+					// fmt.Fprintf(os.Stderr, "leftOver2: %v  %t\n\t%v  %t\n", ev1, ok1, ev2, ok2)
 				} else {
 					panic(fmt.Sprintf("Invalid channel number %d", leftOver.cnr))
 				}
+				// needed if files are not ordered
+				leftOver = nil
 			} else {
 				// no leftOver -> read from both channels
 				ev1v, ok1v := <-c1

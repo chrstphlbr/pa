@@ -38,64 +38,179 @@ type InvocationsFlat struct {
 	Invocations Invocations
 }
 
+type ExecutionSlice interface {
+	Slice() [][][][][]float64
+	// returns the length of all leaf elements
+	ElementCount() int
+}
+
 type Invocations []float64
 
-type Iteration Invocations
+type Iteration struct {
+	ID          int
+	Invocations Invocations
+}
 
-type Fork []Iteration
+func (i *Iteration) Merge(other *Iteration) error {
+	if i.ID != other.ID {
+		return fmt.Errorf("Iteration IDs do not match: %d != %d", i.ID, other.ID)
+	}
+	i.Invocations = append(i.Invocations, other.Invocations...)
+	return nil
+}
 
-type Trial []Fork
+type Fork struct {
+	ID           int
+	IterationIDs []int
+	Iterations   map[int]*Iteration
+}
 
-type InstanceID string
+func (f *Fork) Merge(other *Fork) error {
+	if f.ID != other.ID {
+		return fmt.Errorf("Fork IDs do not match: %d != %d", f.ID, other.ID)
+	}
 
-func NewInstanceID(id string) InstanceID {
-	return InstanceID(id)
+	for _, oiid := range other.IterationIDs {
+		oi, ok := other.Iterations[oiid]
+		if !ok {
+			panic(fmt.Sprintf("Invalid state: IterationIDs and Iterations out of sync for %d", oiid))
+		}
+		i, ok := f.Iterations[oiid]
+		if !ok {
+			f.IterationIDs = append(f.IterationIDs, oiid)
+			f.Iterations[oiid] = oi
+		} else {
+			err := i.Merge(oi)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+type Trial struct {
+	ID      int
+	ForkIDs []int
+	Forks   map[int]*Fork
+}
+
+func (t *Trial) Merge(other *Trial) error {
+	if t.ID != other.ID {
+		return fmt.Errorf("Trial IDs do not match: %d != %d", t.ID, other.ID)
+	}
+
+	for _, ofid := range other.ForkIDs {
+		of, ok := other.Forks[ofid]
+		if !ok {
+			panic(fmt.Sprintf("Invalid state: ForkIDs and Forks out of sync for %d", ofid))
+		}
+		f, ok := t.Forks[ofid]
+		if !ok {
+			t.ForkIDs = append(t.ForkIDs, ofid)
+			t.Forks[ofid] = of
+		} else {
+			err := f.Merge(of)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 type Instance struct {
-	ID     InstanceID
-	Trials []Trial
+	ID       string
+	TrialIDs []int
+	Trials   map[int]*Trial
 }
 
-func NewInstance(id string) *Instance {
-	return NewInstanceTrialSize(id, 10)
-}
-
-func NewInstanceTrialSize(id string, ts int) *Instance {
-	iid := NewInstanceID(id)
-	return &Instance{
-		ID:     iid,
-		Trials: make([]Trial, 0, ts),
+func (i *Instance) Merge(other *Instance) error {
+	if i.ID != other.ID {
+		return fmt.Errorf("Instance IDs do not match: %s != %s", i.ID, other.ID)
 	}
+
+	for _, otid := range other.TrialIDs {
+		ot, ok := other.Trials[otid]
+		if !ok {
+			panic(fmt.Sprintf("Invalid state: TrialIDs and Trials out of sync for %d", otid))
+		}
+		t, ok := i.Trials[otid]
+		if !ok {
+			i.TrialIDs = append(i.TrialIDs, otid)
+			i.Trials[otid] = ot
+		} else {
+			err := t.Merge(ot)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 type Execution struct {
-	Benchmark      *B
-	Instances      map[InstanceID]*Instance
-	arraySizes     ArraySizes
-	indexStartsAt1 bool
-	lenLock        sync.RWMutex
-	len            int
+	Benchmark   *B
+	InstanceIDs []string
+	Instances   map[string]*Instance
+	arraySizes  ArraySizes
+	lenLock     sync.RWMutex
+	len         int
 }
 
 func NewExecution(b *B) *Execution {
-	return NewExecutionWithIndexAndDefaults(b, true, defaultArraySizes)
+	return NewExecutionWithDefaults(b, defaultArraySizes)
 }
 
-func NewExecutionWithIndex(b *B, idxAt1 bool) *Execution {
-	return NewExecutionWithIndexAndDefaults(b, idxAt1, defaultArraySizes)
-}
-
-func NewExecutionWithIndexAndDefaults(b *B, idxAt1 bool, d ArraySizes) *Execution {
+func NewExecutionWithDefaults(b *B, d ArraySizes) *Execution {
 	return &Execution{
-		Benchmark:      b,
-		Instances:      make(map[InstanceID]*Instance),
-		arraySizes:     d,
-		indexStartsAt1: idxAt1,
+		Benchmark:  b,
+		Instances:  make(map[string]*Instance),
+		arraySizes: d,
 	}
 }
 
-func (e *Execution) Len() int {
+func NewExecutionFromInvocationsFlat(ivf InvocationsFlat) *Execution {
+	e := NewExecution(ivf.Benchmark)
+
+	iid := ivf.Instance
+	tid := ivf.Trial
+	fid := ivf.Fork
+	itid := ivf.Iteration
+
+	e.InstanceIDs = append(e.InstanceIDs, iid)
+	e.Instances[iid] = &Instance{
+		ID:       iid,
+		TrialIDs: append(make([]int, 0, e.arraySizes.Trials), tid),
+		Trials: map[int]*Trial{
+			tid: {
+				ID:      tid,
+				ForkIDs: append(make([]int, 0, e.arraySizes.Forks), fid),
+				Forks: map[int]*Fork{
+					fid: {
+						ID:           fid,
+						IterationIDs: append(make([]int, 0, e.arraySizes.Iterations), itid),
+						Iterations: map[int]*Iteration{
+							itid: {
+								ID:          itid,
+								Invocations: ivf.Invocations,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	e.len = len(ivf.Invocations)
+
+	return e
+}
+
+func (e *Execution) ElementCount() int {
 	e.lenLock.RLock()
 	defer e.lenLock.RUnlock()
 	return e.len
@@ -107,6 +222,50 @@ func (e *Execution) addLen(i int) {
 	e.len += i
 }
 
+func (e *Execution) Slice() [][][][][]float64 {
+	out := make([][][][][]float64, 0, len(e.InstanceIDs))
+
+	for _, iid := range e.InstanceIDs {
+		i, ok := e.Instances[iid]
+		if !ok {
+			panic(fmt.Sprintf("Invalid state: InstanceIDs and Instances out of sync for %s", iid))
+		}
+
+		trialSlice := make([][][][]float64, 0, len(i.Trials))
+
+		for _, tid := range i.TrialIDs {
+			t, ok := i.Trials[tid]
+			if !ok {
+				panic(fmt.Sprintf("Invalid state: TrialIDs and Trials out of sync for %d", tid))
+			}
+
+			forkSlice := make([][][]float64, 0, len(t.Forks))
+
+			for _, fid := range t.ForkIDs {
+				f, ok := t.Forks[fid]
+				if !ok {
+					panic(fmt.Sprintf("Invalid state: ForkIDs and Forks out of sync for %d", fid))
+				}
+
+				iterationSlice := make([][]float64, 0, len(f.Iterations))
+
+				for _, itid := range f.IterationIDs {
+					it, ok := f.Iterations[itid]
+					if !ok {
+						panic(fmt.Sprintf("Invalid state: IterationIDs and Iterations out of sync for %d", itid))
+					}
+					iterationSlice = append(iterationSlice, it.Invocations)
+				}
+				forkSlice = append(forkSlice, iterationSlice)
+			}
+			trialSlice = append(trialSlice, forkSlice)
+		}
+		out = append(out, trialSlice)
+	}
+
+	return out
+}
+
 func (e *Execution) AddInvocations(is InvocationsFlat) error {
 	if e == nil {
 		return fmt.Errorf("Execution e is nil")
@@ -116,54 +275,56 @@ func (e *Execution) AddInvocations(is InvocationsFlat) error {
 		return fmt.Errorf("Execution belongs to %v, not to %v", e.Benchmark, is.Benchmark)
 	}
 
-	// assume that trial, fork, and iteration number starts at 1
-	if e.indexStartsAt1 {
-		is.Trial--
-		is.Fork--
-		is.Iteration--
+	// create Execution from InvocationsFlat
+	ne := NewExecutionFromInvocationsFlat(is)
+	err := e.Merge(ne)
+
+	e.addLen(ne.len)
+
+	return err
+}
+
+func (e *Execution) Merge(other *Execution) error {
+	if !e.Benchmark.Equals(other.Benchmark) {
+		return fmt.Errorf("Benchmarks not the same: this %+v, other %+v", e.Benchmark, other.Benchmark)
 	}
 
-	iid := NewInstanceID(is.Instance)
-	i, insExists := e.Instances[iid]
-
-	// check if instance exists
-	if !insExists {
-		i = NewInstance(is.Instance)
-		iid = i.ID
-		e.Instances[iid] = i
+	for _, oiid := range other.InstanceIDs {
+		oi, ok := other.Instances[oiid]
+		if !ok {
+			panic(fmt.Sprintf("Invalid state: InstanceIDs and Instances out of sync for %s", oiid))
+		}
+		i, ok := e.Instances[oiid]
+		if !ok {
+			e.InstanceIDs = append(e.InstanceIDs, oiid)
+			e.Instances[oiid] = oi
+		} else {
+			err := i.Merge(oi)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	// check if trial exists
-	t := is.Trial
-	lt := len(i.Trials)
-	if t >= lt {
-		i.Trials = append(i.Trials, make(Trial, 0, e.arraySizes.Trials))
-		t = lt
-	}
-	trial := i.Trials[t]
+	// update length
+	other.lenLock.RLock()
+	defer other.lenLock.RUnlock()
+	e.addLen(other.len)
 
-	// check if fork exists
-	f := is.Fork
-	lf := len(trial)
-	if f >= lf {
-		i.Trials[t] = append(trial, make(Fork, 0, e.arraySizes.Forks))
-		f = lf
-		trial = i.Trials[t]
-	}
-	fork := trial[f]
-
-	// check if iterations exists
-	it := is.Iteration
-	lit := len(fork)
-	if it >= lit {
-		i.Trials[t][f] = append(fork, make(Iteration, 0, e.arraySizes.Iterations))
-		it = lit
-		fork = i.Trials[t][f]
-	}
-	iteration := fork[it]
-
-	// append invocation to iteration
-	i.Trials[t][f][it] = append(iteration, is.Invocations...)
-	e.addLen(len(is.Invocations))
 	return nil
+}
+
+type Executions []*Execution
+
+func (e Executions) Len() int {
+	return len(e)
+}
+
+func (e Executions) Less(i, j int) bool {
+	// return true iff i is smaller or equal to j
+	return e[j].Benchmark.Compare(e[i].Benchmark) == -1
+}
+
+func (e Executions) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
 }

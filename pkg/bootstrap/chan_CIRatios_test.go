@@ -330,3 +330,278 @@ func TestCIRatiosValues(t *testing.T) {
 
 	checkChannelEmpty(t, rc)
 }
+
+func appendChannels(cs ...bench.Chan) bench.Chan {
+	out := make(bench.Chan)
+
+	go func() {
+		defer close(out)
+		for _, c := range cs {
+			for v := range c {
+				out <- v
+			}
+		}
+	}()
+
+	return out
+}
+
+func TestCIRatiosValuesGap1(t *testing.T) {
+	bc1, ex1 := createChannelStartEnd(2, 5, true, true)
+	bc21, ex21 := createChannelStartEnd(0, 2, true, false)
+	bc22, ex22 := createChannelStartEnd(5, 10, false, true)
+
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex21, 0, 2, 0, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex1, 2, 5, -2, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 2, 7, -2, 2)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesGap2(t *testing.T) {
+	bc2, ex2 := createChannelStartEnd(2, 5, true, true)
+	bc11, ex11 := createChannelStartEnd(0, 2, true, false)
+	bc12, ex12 := createChannelStartEnd(5, 10, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex11, 0, 2, 0, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex2, 2, 5, -2, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 2, 7, -2, 1)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesInterleaved1(t *testing.T) {
+	bc11, ex11 := createChannelStartEnd(0, 2, true, false)
+	bc12, ex12 := createChannelStartEnd(4, 6, false, true)
+	bc21, ex21 := createChannelStartEnd(2, 4, true, false)
+	bc22, ex22 := createChannelStartEnd(6, 8, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex11, 0, 2, 0, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex21, 2, 4, -2, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 4, 6, -4, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 6, 8, -6, 2)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesInterleaved2(t *testing.T) {
+	bc21, ex21 := createChannelStartEnd(0, 2, true, false)
+	bc22, ex22 := createChannelStartEnd(4, 6, false, true)
+	bc11, ex11 := createChannelStartEnd(2, 4, true, false)
+	bc12, ex12 := createChannelStartEnd(6, 8, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex21, 0, 2, 0, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex11, 2, 4, -2, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 4, 6, -4, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 6, 8, -6, 1)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosOverlap1(t *testing.T) {
+	bc1, ex1 := createChannel(0, 7)
+	bc2, ex2 := createChannel(4, 10)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	checkOneSided(t, rc, ex1, 0, 4, 0, 1)
+
+	checkMerged(t, rc, ex1, ex2, 4, 7, 0, -4)
+
+	checkOneSided(t, rc, ex2, 7, 10, -4, 2)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosOverlap2(t *testing.T) {
+	bc2, ex2 := createChannel(0, 7)
+	bc1, ex1 := createChannel(4, 10)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	checkOneSided(t, rc, ex2, 0, 4, 0, 2)
+
+	checkMerged(t, rc, ex1, ex2, 4, 7, -4, 0)
+
+	checkOneSided(t, rc, ex1, 7, 10, -4, 1)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesInterleavedOverlap1(t *testing.T) {
+	bc11, ex11 := createChannelStartEnd(0, 2, true, false)
+	bc12, ex12 := createChannelStartEnd(4, 7, false, true)
+	bc21, ex21 := createChannelStartEnd(2, 4, true, false)
+	bc22, ex22 := createChannelStartEnd(6, 8, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex11, 0, 2, 0, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex21, 2, 4, -2, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 4, 6, -4, 1)
+
+	// merged
+	checkMerged(t, rc, ex12, ex22, 6, 7, -4, -6)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 7, 8, -6, 2)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesInterleavedOverlap2(t *testing.T) {
+	bc21, ex21 := createChannelStartEnd(0, 2, true, false)
+	bc22, ex22 := createChannelStartEnd(4, 7, false, true)
+	bc11, ex11 := createChannelStartEnd(2, 4, true, false)
+	bc12, ex12 := createChannelStartEnd(6, 8, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex21, 0, 2, 0, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex11, 2, 4, -2, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 4, 6, -4, 2)
+
+	// merged
+	checkMerged(t, rc, ex12, ex22, 6, 7, -6, -4)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 7, 8, -6, 1)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesInterleavedMultipleOverlap1(t *testing.T) {
+	bc11, ex11 := createChannelStartEnd(0, 2, true, false)
+	bc12, ex12 := createChannelStartEnd(3, 5, false, true)
+	bc21, ex21 := createChannelStartEnd(0, 1, true, false)
+	bc22, ex22 := createChannelStartEnd(2, 3, false, true)
+	bc23, ex23 := createChannelStartEnd(5, 6, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+	bc2 := appendChannels(bc21, bc22, bc23)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// merged
+	checkMerged(t, rc, ex11, ex21, 0, 1, 0, 0)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex11, 1, 2, 0, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 2, 3, -2, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 3, 5, -3, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex23, 5, 6, -5, 2)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosValuesInterleavedMultipleOverlap2(t *testing.T) {
+	bc21, ex21 := createChannelStartEnd(0, 2, true, false)
+	bc22, ex22 := createChannelStartEnd(3, 5, false, true)
+	bc11, ex11 := createChannelStartEnd(0, 1, true, false)
+	bc12, ex12 := createChannelStartEnd(2, 3, false, true)
+	bc13, ex13 := createChannelStartEnd(5, 6, false, true)
+
+	bc1 := appendChannels(bc11, bc12, bc13)
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	// merged
+	checkMerged(t, rc, ex11, ex21, 0, 1, 0, 0)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex21, 1, 2, 0, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex12, 2, 3, -2, 1)
+
+	// sole channel 2
+	checkOneSided(t, rc, ex22, 3, 5, -3, 2)
+
+	// sole channel 1
+	checkOneSided(t, rc, ex13, 5, 6, -5, 1)
+
+	checkChannelEmpty(t, rc)
+}
+
+func TestCIRatiosTwoOrdered(t *testing.T) {
+	bc21, ex21 := createChannelStartEnd(0, 10, true, false)
+	bc22, ex22 := createChannelStartEnd(0, 10, false, true)
+	bc11, ex11 := createChannelStartEnd(0, 10, true, false)
+	bc12, ex12 := createChannelStartEnd(0, 10, false, true)
+
+	bc1 := appendChannels(bc11, bc12)
+	bc2 := appendChannels(bc21, bc22)
+
+	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+
+	checkMerged(t, rc, ex11, ex21, 0, 10, 0, 0)
+
+	checkMerged(t, rc, ex12, ex22, 10, 20, -10, -10)
+
+	checkChannelEmpty(t, rc)
+}

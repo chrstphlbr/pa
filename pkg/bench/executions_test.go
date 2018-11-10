@@ -58,7 +58,7 @@ func TestAddInvocationsInvalidBench(t *testing.T) {
 }
 
 func TestAddInvocationsFirst(t *testing.T) {
-	e := bench.NewExecutionWithIndex(b, true)
+	e := bench.NewExecution(b)
 	in := "instance1"
 
 	nrivs := 20
@@ -70,45 +70,11 @@ func TestAddInvocationsFirst(t *testing.T) {
 		t.Fatalf("Could not add: %v", err)
 	}
 
-	iid := bench.NewInstanceID(in)
-	i, ie := e.Instances[iid]
-	if !ie {
-		t.Fatalf("Instance '%s' does not exist", in)
-	}
-
-	lt := len(i.Trials)
-	if lt != 1 {
-		t.Fatalf("Trial length not 1, was %d", lt)
-	}
-
-	forks := i.Trials[0]
-	lf := len(forks)
-	if lf != 1 {
-		t.Fatalf("Forks length not 1, was %d", lf)
-	}
-
-	iterations := i.Trials[0][0]
-	li := len(iterations)
-	if li != 1 {
-		t.Fatalf("Iterations length not 1, was %d", li)
-	}
-
-	invocations := i.Trials[0][0][0]
-	livs := len(invocations)
-	if livs != nrivs {
-		t.Fatalf("Invocations length not %d, was %d", nrivs, livs)
-	}
-
-	for i, v := range invocations {
-		expected := float64(i)
-		if v != expected {
-			t.Fatalf("Unexepected invocations value %f, expected %f", v, expected)
-		}
-	}
+	checkInstance(t, e, in, nrivs, 1, 1, 1, 1, nrivs)
 }
 
 func addInvocation(t *testing.T, ins1, ins2 string, t1, t2, f1, f2, i1, i2 int) {
-	e := bench.NewExecutionWithIndex(b, true)
+	e := bench.NewExecution(b)
 	nrivs := 20
 	is := createInvocationsFlat(nrivs, b, ins1, t1, f1, i1)
 

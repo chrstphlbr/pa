@@ -17,18 +17,18 @@ import (
 )
 
 func CIRatioFunc(iters int, nrWorkers int) st.CIRatioFunc {
-	return func(executionsA *bench.Execution, executionsB *bench.Execution, statFunc st.StatisticFunc, significanceLevel float64) st.CIRatio {
+	return func(executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, statFunc st.StatisticFunc, significanceLevel float64) st.CIRatio {
 		return CIRatio(iters, nrWorkers, statFunc, executionsA, executionsB, significanceLevel)
 	}
 }
 
 func CIFunc(iters int, nrWorkers int) st.CIFunc {
-	return func(executions *bench.Execution, statFunc st.StatisticFunc, significanceLevel float64) st.CI {
+	return func(executions bench.ExecutionSlice, statFunc st.StatisticFunc, significanceLevel float64) st.CI {
 		return CI(iters, nrWorkers, statFunc, executions, significanceLevel)
 	}
 }
 
-func CIRatio(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executionsA *bench.Execution, executionsB *bench.Execution, significanceLevel float64) st.CIRatio {
+func CIRatio(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, significanceLevel float64) st.CIRatio {
 	simStatA := simulatedStatistics(iters, nrWorkers, statisticFunc, executionsA)
 	ciA := ci(simStatA, significanceLevel)
 
@@ -54,7 +54,7 @@ func CIRatio(iters int, nrWorkers int, statisticFunc st.StatisticFunc, execution
 	}
 }
 
-func CI(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executions *bench.Execution, significanceLevel float64) st.CI {
+func CI(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, significanceLevel float64) st.CI {
 	simStat := simulatedStatistics(iters, nrWorkers, statisticFunc, executions)
 	return ci(simStat, significanceLevel)
 }
@@ -81,7 +81,7 @@ func ci(d []float64, significanceLevel float64) st.CI {
 	}
 }
 
-func simulatedStatistics(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executions *bench.Execution) []float64 {
+func simulatedStatistics(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice) []float64 {
 	// create workers
 	var wg sync.WaitGroup
 	wg.Add(iters)
@@ -124,25 +124,18 @@ func simulatedStatistics(iters int, nrWorkers int, statisticFunc st.StatisticFun
 	return simStat
 }
 
-func randomResampling(d *bench.Execution) []float64 {
-	// get InstanceIDs
-	lis := len(d.Instances)
-	is := make([]bench.InstanceID, 0, lis)
-	for iid := range d.Instances {
-		is = append(is, iid)
-	}
+func randomResampling(d bench.ExecutionSlice) []float64 {
+	s := d.Slice()
+
+	fmt.Println(s)
+
+	lis := len(s)
 	isample := sampleSize(lis)
 
-	ret := make([]float64, 0, d.Len())
+	ret := make([]float64, 0, d.ElementCount())
 
 	for _, i := range isample {
-		iid := is[i]
-		ins, ok := d.Instances[iid]
-		if !ok {
-			panic(fmt.Sprintf("Could not get instance '%s'", iid))
-		}
-
-		trials := ins.Trials
+		trials := s[i]
 		ltrials := len(trials)
 		tsample := sampleSize(ltrials)
 

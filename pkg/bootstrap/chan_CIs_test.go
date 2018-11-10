@@ -79,34 +79,36 @@ func TestCIsError(t *testing.T) {
 }
 
 func createChannel(from, to int) (bench.Chan, []*bench.Execution) {
+	return createChannelStartEnd(from, to, true, true)
+}
+
+func createChannelStartEnd(from, to int, start, end bool) (bench.Chan, []*bench.Execution) {
+	return createChannelStartEndDetail(from, to, start, end, "i1", 0, 0, 0)
+}
+
+func createChannelStartEndDetail(from, to int, start, end bool, instance string, trial, fork, iteration int) (bench.Chan, []*bench.Execution) {
 	bc := make(bench.Chan)
 
 	var execs []*bench.Execution
 	for i := from; i < to; i++ {
 		b := bench.New(fmt.Sprintf("b%d", i))
-
-		iid := bench.NewInstanceID("i1")
-		execs = append(execs, &bench.Execution{
-			Benchmark: b,
-			Instances: map[bench.InstanceID]*bench.Instance{
-				iid: {
-					ID: iid,
-					Trials: []bench.Trial{
-						[]bench.Fork{
-							[]bench.Iteration{
-								bench.Iteration(bench.Invocations{4.0, 4.0, 4.0, 4.0, 4.0}),
-							},
-						},
-					},
-				},
-			},
+		e := bench.NewExecutionFromInvocationsFlat(bench.InvocationsFlat{
+			Benchmark:   b,
+			Instance:    instance,
+			Trial:       trial,
+			Fork:        fork,
+			Iteration:   iteration,
+			Invocations: bench.Invocations{4.0, 4.0, 4.0, 4.0, 4.0},
 		})
+		execs = append(execs, e)
 	}
 
 	go func() {
 		defer close(bc)
-		bc <- bench.ExecutionValue{
-			Type: bench.ExecStart,
+		if start {
+			bc <- bench.ExecutionValue{
+				Type: bench.ExecStart,
+			}
 		}
 
 		for _, e := range execs {
@@ -116,8 +118,10 @@ func createChannel(from, to int) (bench.Chan, []*bench.Execution) {
 			}
 		}
 
-		bc <- bench.ExecutionValue{
-			Type: bench.ExecEnd,
+		if end {
+			bc <- bench.ExecutionValue{
+				Type: bench.ExecEnd,
+			}
 		}
 	}()
 	return bc, execs
