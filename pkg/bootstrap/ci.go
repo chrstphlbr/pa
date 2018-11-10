@@ -127,8 +127,6 @@ func simulatedStatistics(iters int, nrWorkers int, statisticFunc st.StatisticFun
 func randomResampling(d bench.ExecutionSlice) []float64 {
 	s := d.Slice()
 
-	fmt.Println(s)
-
 	lis := len(s)
 	isample := sampleSize(lis)
 
