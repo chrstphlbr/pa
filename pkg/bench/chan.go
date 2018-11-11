@@ -89,7 +89,6 @@ func mergeExecutionValues(evs Executions, out Chan) {
 				if err != nil {
 					panic(fmt.Sprintf("Could not merge Executions: %v", err))
 				}
-				prev = prev
 				continue
 			} else {
 				// send unmerged

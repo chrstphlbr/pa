@@ -157,7 +157,7 @@ func (pp *PerfParams) Keys() []string {
 	return pp.keys
 }
 
-func (pp PerfParams) String() string {
+func (pp *PerfParams) String() string {
 	pp.l.RLock()
 	defer pp.l.RUnlock()
 	var sb strings.Builder
