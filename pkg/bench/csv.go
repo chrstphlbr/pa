@@ -9,23 +9,6 @@ import (
 	"strings"
 )
 
-type ExecutionType int
-
-const (
-	ExecNext ExecutionType = iota
-	ExecError
-	ExecStart
-	ExecEnd
-)
-
-type ExecutionValue struct {
-	Type ExecutionType
-	Exec *Execution
-	Err  error
-}
-
-type Chan chan ExecutionValue
-
 func FromCSV(ctx context.Context, r io.Reader) (Chan, error) {
 	cr := csv.NewReader(r)
 	if cr == nil {

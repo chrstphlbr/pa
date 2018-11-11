@@ -114,6 +114,7 @@ func checkOneSided(t *testing.T, rc <-chan bootstrap.CIRatioResult, execs []*ben
 		if !ok {
 			t.Fatalf("Expected value from channel, but did not receive one (pos: %d, bench: %v)", i, e.Benchmark)
 		}
+
 		if ev.Err != nil {
 			t.Fatalf("Received error: %v", ev.Err)
 		}
@@ -589,10 +590,10 @@ func TestCIRatiosValuesInterleavedMultipleOverlap2(t *testing.T) {
 }
 
 func TestCIRatiosTwoOrdered(t *testing.T) {
-	bc21, ex21 := createChannelStartEnd(0, 10, true, false)
-	bc22, ex22 := createChannelStartEnd(0, 10, false, true)
 	bc11, ex11 := createChannelStartEnd(0, 10, true, false)
 	bc12, ex12 := createChannelStartEnd(0, 10, false, true)
+	bc21, ex21 := createChannelStartEnd(0, 10, true, false)
+	bc22, ex22 := createChannelStartEnd(0, 10, false, true)
 
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22)

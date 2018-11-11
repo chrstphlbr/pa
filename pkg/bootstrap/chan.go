@@ -62,6 +62,7 @@ func CIRatios(c1, c2 bench.Chan, iters int, nrWorkers int, statFunc stat.Statist
 		for {
 			var ev1, ev2 *bench.ExecutionValue
 			var ok1, ok2 bool
+
 			if leftOver != nil {
 				// has leftOver -> only read from one channel
 				if leftOver.cnr == cNr1 {
