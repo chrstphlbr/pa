@@ -36,10 +36,11 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 string) {
+func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
 	sl := flag.Float64("sig", 0.05, "Significance level")
+	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
 	flag.Parse()
 
 	args := flag.Args()
@@ -47,16 +48,33 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 	if largs == 1 {
 		// single file -> only report confidence intervals
 		c = cmdCI
-		f1 = args[0]
+		f1 = []string{args[0]}
 	} else if largs == 2 {
 		// two files -> report performance changes
 		c = cmdDet
-		f1 = args[0]
-		f2 = args[1]
+		f1 = []string{args[0]}
+		f2 = []string{args[1]}
 	} else if largs < 1 {
 		fmt.Fprintf(os.Stdout, "Expected at least one file argument\n\n")
 		flag.Usage()
 		os.Exit(1)
+	} else {
+		c = cmdDet
+		// multiple files for test and control group
+		if largs / *m != 2 {
+			fmt.Fprintf(os.Stdout, "-m must be half of number of arguments\n\n")
+			flag.Usage()
+			os.Exit(1)
+		}
+
+		f1 = []string{}
+		for i := 0; i < *m; i++ {
+			f1 = append(f1, args[i])
+		}
+		f2 = []string{}
+		for i := *m; i < *m*2; i++ {
+			f2 = append(f2, args[i])
+		}
 	}
 
 	statisticFunction := *sfStr
@@ -97,7 +115,7 @@ func main() {
 	switch cmd {
 	case cmdCI:
 		exec = func() {
-			ci(sim, nrWorkers, sigLev, sf.Func, f1)
+			ci(sim, nrWorkers, sigLev, sf.Func, f1[0])
 		}
 	case cmdDet:
 		exec = func() {
@@ -143,28 +161,18 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 	}
 }
 
-func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2 string) {
-	f1, err := os.Open(fp1)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open file1 '%s'", fp1)
-	}
-
-	f2, err := os.Open(fp2)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open file2 '%s'", fp2)
-	}
-
+func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2 []string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	c1, err := bench.FromCSV(ctx, f1)
+	c1, err := mergedInput(ctx, fp1)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
-	c2, err := bench.FromCSV(ctx, f2)
+	c2, err := mergedInput(ctx, fp2)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 
 	rc := bootstrap.CIRatios(c1, c2, sim, nrWorkers, sf, sigLev)
@@ -177,6 +185,30 @@ func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2
 
 		b := res.Benchmark
 		cir := res.CIRatio
-		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level, cir.CIA.Lower, cir.CIB.Upper, cir.CIB.Level, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level)
+		fmt.Fprintf(
+			os.Stdout,
+			"%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n",
+			b.Name, b.FunctionParams, b.PerfParams,
+			cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
+			cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
+			cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
+		)
 	}
+}
+
+func mergedInput(ctx context.Context, fs []string) (bench.Chan, error) {
+	var chans []bench.Chan
+	for _, fn := range fs {
+		f, err := os.Open(fn)
+		if err != nil {
+			return nil, fmt.Errorf("Could not open file1 '%s'", fn)
+		}
+
+		c1, err := bench.FromCSV(ctx, f)
+		if err != nil {
+			return nil, fmt.Errorf("Could not read from CSV for file '%s': %v", fn, err)
+		}
+		chans = append(chans, c1)
+	}
+	return bench.MergeChans(chans...), nil
 }

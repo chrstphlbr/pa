@@ -72,7 +72,7 @@ func fromCSVHelper(t *testing.T, file io.Reader, expectedBenchmarks int, expecte
 
 	// expected benchmarks + start + ended
 	expectedExecutionValues := expectedBenchmarks + 2
-	if !started && !ended && cnt != expectedExecutionValues {
+	if !started || !ended || cnt != expectedExecutionValues {
 		t.Fatalf("started = %t, stopped = %t, messages = %d", started, ended, cnt)
 	}
 
@@ -93,7 +93,7 @@ func header(t *testing.T) (*csv.Writer, fmt.Stringer) {
 
 func TestFromCSVEmpty(t *testing.T) {
 	sr := strings.NewReader("")
-	es, err := fromCSVHelper(t, sr, 2, false)
+	es, err := fromCSVHelper(t, sr, 0, false)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -105,7 +105,7 @@ func TestFromCSVEmpty(t *testing.T) {
 
 func TestFromCSVInvalidColumnCount(t *testing.T) {
 	sr := strings.NewReader("a;b;c;")
-	_, err := fromCSVHelper(t, sr, 2, false)
+	_, err := fromCSVHelper(t, sr, 0, false)
 	if err == nil {
 		t.Fatalf("Expected error %v", err)
 	}
@@ -118,7 +118,7 @@ func TestFromCSVInvalidColumnCount(t *testing.T) {
 func TestFromCSVHeaderAndComma(t *testing.T) {
 	_, sb := header(t)
 	sr := strings.NewReader(sb.String())
-	es, err := fromCSVHelper(t, sr, 2, false)
+	es, err := fromCSVHelper(t, sr, 0, false)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -139,7 +139,7 @@ func TestFromCSVSingleInvs(t *testing.T) {
 	w.Flush()
 
 	sr := strings.NewReader(sb.String())
-	es, err := fromCSVHelper(t, sr, 2, false)
+	es, err := fromCSVHelper(t, sr, 1, false)
 	if err != nil {
 		t.Fatalf("%v", err)
 	}

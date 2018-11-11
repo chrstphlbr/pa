@@ -47,6 +47,7 @@ func FromCSV(ctx context.Context, r io.Reader) (Chan, error) {
 			case c <- ev:
 				ev, first = parseExecution(cr, first)
 				if ev.Type == ExecEnd {
+					c <- ev
 					break Loop
 				}
 			case <-ctx.Done():
