@@ -168,11 +168,13 @@ func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2
 	c1, err := mergedInput(ctx, fp1)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return
 	}
 
 	c2, err := mergedInput(ctx, fp2)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return
 	}
 
 	rc := bootstrap.CIRatios(c1, c2, sim, nrWorkers, sf, sigLev)
