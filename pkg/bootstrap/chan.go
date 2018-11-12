@@ -13,7 +13,7 @@ type CIResult struct {
 	Err       error
 }
 
-func CIs(c bench.Chan, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) <-chan CIResult {
+func CIs(c bench.Chan, iters int, maxNrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) <-chan CIResult {
 	out := make(chan CIResult)
 	go func() {
 		defer close(out)
@@ -26,7 +26,7 @@ func CIs(c bench.Chan, iters int, nrWorkers int, statFunc stat.StatisticFunc, si
 			case bench.ExecNext:
 				out <- CIResult{
 					Benchmark: br.Exec.Benchmark,
-					CI:        CI(iters, nrWorkers, statFunc, br.Exec, significanceLevel),
+					CI:        CI(iters, maxNrWorkers, statFunc, br.Exec, significanceLevel),
 				}
 			}
 		}
@@ -52,7 +52,7 @@ type leftOver struct {
 	cnr chanNumber
 }
 
-func CIRatios(c1, c2 bench.Chan, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) <-chan CIRatioResult {
+func CIRatios(c1, c2 bench.Chan, iters int, maxNrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) <-chan CIRatioResult {
 	out := make(chan CIRatioResult)
 
 	go func() {
@@ -96,13 +96,13 @@ func CIRatios(c1, c2 bench.Chan, iters int, nrWorkers int, statFunc stat.Statist
 
 			if ok1 && ok2 {
 				// both values received
-				leftOver = handleTwoResults(out, ev1, ev2, iters, nrWorkers, statFunc, significanceLevel)
+				leftOver = handleTwoResults(out, ev1, ev2, iters, maxNrWorkers, statFunc, significanceLevel)
 			} else if ok1 {
 				// only c1 received
-				handleSingleResult(out, ev1, cNr1, iters, nrWorkers, statFunc, significanceLevel)
+				handleSingleResult(out, ev1, cNr1, iters, maxNrWorkers, statFunc, significanceLevel)
 			} else if ok2 {
 				// only c2 received
-				handleSingleResult(out, ev2, cNr2, iters, nrWorkers, statFunc, significanceLevel)
+				handleSingleResult(out, ev2, cNr2, iters, maxNrWorkers, statFunc, significanceLevel)
 			} else {
 				// done
 				break
@@ -113,7 +113,7 @@ func CIRatios(c1, c2 bench.Chan, iters int, nrWorkers int, statFunc stat.Statist
 	return out
 }
 
-func handleSingleResult(out chan<- CIRatioResult, ev *bench.ExecutionValue, cnr chanNumber, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) {
+func handleSingleResult(out chan<- CIRatioResult, ev *bench.ExecutionValue, cnr chanNumber, iters int, maxNrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) {
 	if ev.Type == bench.ExecStart || ev.Type == bench.ExecEnd {
 		return
 	} else if ev.Type == bench.ExecError {
@@ -123,7 +123,7 @@ func handleSingleResult(out chan<- CIRatioResult, ev *bench.ExecutionValue, cnr 
 		return
 	}
 
-	ci := CI(iters, nrWorkers, statFunc, ev.Exec, significanceLevel)
+	ci := CI(iters, maxNrWorkers, statFunc, ev.Exec, significanceLevel)
 
 	cir := stat.CIRatio{}
 	if cnr == cNr1 {
@@ -141,7 +141,7 @@ func handleSingleResult(out chan<- CIRatioResult, ev *bench.ExecutionValue, cnr 
 	}
 }
 
-func handleTwoResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionValue, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) *leftOver {
+func handleTwoResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionValue, iters int, maxNrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) *leftOver {
 	if (ev1.Type == bench.ExecStart || ev1.Type == bench.ExecEnd) && (ev2.Type == bench.ExecStart || ev2.Type == bench.ExecEnd) {
 		// handle both started or both done
 		return nil
@@ -152,28 +152,28 @@ func handleTwoResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionValue, 
 		out <- CIRatioResult{
 			Err: ev1.Err,
 		}
-		handleSingleResult(out, ev2, cNr2, iters, nrWorkers, statFunc, significanceLevel)
+		handleSingleResult(out, ev2, cNr2, iters, maxNrWorkers, statFunc, significanceLevel)
 	} else if ev2.Type == bench.ExecError {
 		// channel 1 sent error
 		out <- CIRatioResult{
 			Err: ev2.Err,
 		}
-		handleSingleResult(out, ev1, cNr1, iters, nrWorkers, statFunc, significanceLevel)
+		handleSingleResult(out, ev1, cNr1, iters, maxNrWorkers, statFunc, significanceLevel)
 	} else if ev1.Type == bench.ExecEnd {
 		// channel 1 is done
-		handleSingleResult(out, ev2, cNr2, iters, nrWorkers, statFunc, significanceLevel)
+		handleSingleResult(out, ev2, cNr2, iters, maxNrWorkers, statFunc, significanceLevel)
 	} else if ev2.Type == bench.ExecEnd {
 		// channel 2 is done
-		handleSingleResult(out, ev1, cNr1, iters, nrWorkers, statFunc, significanceLevel)
+		handleSingleResult(out, ev1, cNr1, iters, maxNrWorkers, statFunc, significanceLevel)
 	} else {
 		// both channels have a result
-		return handleTwoValidResults(out, ev1, ev2, iters, nrWorkers, statFunc, significanceLevel)
+		return handleTwoValidResults(out, ev1, ev2, iters, maxNrWorkers, statFunc, significanceLevel)
 	}
 
 	return nil
 }
 
-func handleTwoValidResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionValue, iters int, nrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) *leftOver {
+func handleTwoValidResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionValue, iters int, maxNrWorkers int, statFunc stat.StatisticFunc, significanceLevel float64) *leftOver {
 	ex1 := ev1.Exec
 	ex2 := ev2.Exec
 
@@ -183,16 +183,16 @@ func handleTwoValidResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionVa
 	case 0:
 		out <- CIRatioResult{
 			Benchmark: ex1.Benchmark,
-			CIRatio:   CIRatio(iters, nrWorkers, statFunc, ex1, ex2, significanceLevel),
+			CIRatio:   CIRatio(iters, maxNrWorkers, statFunc, ex1, ex2, significanceLevel),
 		}
 	case -1:
-		handleSingleResult(out, ev1, cNr1, iters, nrWorkers, statFunc, significanceLevel)
+		handleSingleResult(out, ev1, cNr1, iters, maxNrWorkers, statFunc, significanceLevel)
 		return &leftOver{
 			ev:  ev2,
 			cnr: cNr2,
 		}
 	case 1:
-		handleSingleResult(out, ev2, cNr2, iters, nrWorkers, statFunc, significanceLevel)
+		handleSingleResult(out, ev2, cNr2, iters, maxNrWorkers, statFunc, significanceLevel)
 		return &leftOver{
 			ev:  ev1,
 			cnr: cNr1,

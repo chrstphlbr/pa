@@ -16,23 +16,23 @@ import (
 	"gonum.org/v1/gonum/stat/sampleuv"
 )
 
-func CIRatioFunc(iters int, nrWorkers int) st.CIRatioFunc {
+func CIRatioFunc(iters int, maxNrWorkers int) st.CIRatioFunc {
 	return func(executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, statFunc st.StatisticFunc, significanceLevel float64) st.CIRatio {
-		return CIRatio(iters, nrWorkers, statFunc, executionsA, executionsB, significanceLevel)
+		return CIRatio(iters, maxNrWorkers, statFunc, executionsA, executionsB, significanceLevel)
 	}
 }
 
-func CIFunc(iters int, nrWorkers int) st.CIFunc {
+func CIFunc(iters int, maxNrWorkers int) st.CIFunc {
 	return func(executions bench.ExecutionSlice, statFunc st.StatisticFunc, significanceLevel float64) st.CI {
-		return CI(iters, nrWorkers, statFunc, executions, significanceLevel)
+		return CI(iters, maxNrWorkers, statFunc, executions, significanceLevel)
 	}
 }
 
-func CIRatio(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, significanceLevel float64) st.CIRatio {
-	simStatA := simulatedStatistics(iters, nrWorkers, statisticFunc, executionsA)
+func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, significanceLevel float64) st.CIRatio {
+	simStatA := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsA)
 	ciA := ci(simStatA, significanceLevel)
 
-	simStatB := simulatedStatistics(iters, nrWorkers, statisticFunc, executionsB)
+	simStatB := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsB)
 	ciB := ci(simStatB, significanceLevel)
 
 	lSimA := len(simStatA)
@@ -54,8 +54,8 @@ func CIRatio(iters int, nrWorkers int, statisticFunc st.StatisticFunc, execution
 	}
 }
 
-func CI(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, significanceLevel float64) st.CI {
-	simStat := simulatedStatistics(iters, nrWorkers, statisticFunc, executions)
+func CI(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, significanceLevel float64) st.CI {
+	simStat := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executions)
 	return ci(simStat, significanceLevel)
 }
 
@@ -81,13 +81,21 @@ func ci(d []float64, significanceLevel float64) st.CI {
 	}
 }
 
-func simulatedStatistics(iters int, nrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice) []float64 {
+func simulatedStatistics(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice) []float64 {
 	// create workers
 	var wg sync.WaitGroup
 	wg.Add(iters)
+
+	var anw int
+	if iters < maxNrWorkers {
+		anw = iters
+	} else {
+		anw = maxNrWorkers
+	}
+
 	workChan := make(chan int, iters)
 	samplingChan := make(chan []float64, iters)
-	for i := 0; i < nrWorkers; i++ {
+	for i := 0; i < anw; i++ {
 		go func() {
 		Loop:
 			for {

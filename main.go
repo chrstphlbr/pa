@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"bitbucket.org/sealuzh/pa/pkg/bootstrap"
@@ -106,20 +107,19 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 
 func main() {
 	cmd, sim, sigLev, sf, f1, f2 := parseArgs()
+	maxNrWorkers := runtime.NumCPU()
 
-	fmt.Fprintf(os.Stdout, "#Execute CIs:\n# cmd = '%s'\n# bootstrap simulations = %d\n# significance level = %.2f\n# Statistic = %s\n# file 1 = %s\n# file 2 = %s\n\n", cmd, sim, sigLev, sf.Name, f1, f2)
-
-	nrWorkers := 1000
+	fmt.Fprintf(os.Stdout, "#Execute CIs:\n# cmd = '%s'\n# number of cores = %d\n# bootstrap simulations = %d\n# significance level = %.2f\n# Statistic = %s\n# file 1 = %s\n# file 2 = %s\n\n", cmd, maxNrWorkers, sim, sigLev, sf.Name, f1, f2)
 
 	var exec func()
 	switch cmd {
 	case cmdCI:
 		exec = func() {
-			ci(sim, nrWorkers, sigLev, sf.Func, f1[0])
+			ci(sim, maxNrWorkers, sigLev, sf.Func, f1[0])
 		}
 	case cmdDet:
 		exec = func() {
-			det(sim, nrWorkers, sigLev, sf.Func, f1, f2)
+			det(sim, maxNrWorkers, sigLev, sf.Func, f1, f2)
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "Invalid command '%s' (available: 'ci' and 'det')\n\n", cmd)
