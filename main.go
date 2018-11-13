@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"bitbucket.org/sealuzh/pa/pkg/bootstrap"
@@ -20,9 +21,9 @@ type cmd int
 func (c cmd) String() string {
 	switch c {
 	case 0:
-		return "ci"
+		return "CI"
 	case 1:
-		return "det"
+		return "Detection"
 	}
 	return "INVALID_COMMAND"
 }
@@ -37,7 +38,7 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, sampler bench.InvocationSampler, printMem bool) {
+func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, invocationMean bool, invocationSamples int, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
 	sl := flag.Float64("sig", 0.05, "Significance level")
@@ -87,14 +88,6 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		os.Exit(1)
 	}
 
-	if *sm {
-		sampler = bench.MeanInvocations
-	} else if *is == -1 {
-		sampler = bench.AllInvocations
-	} else {
-		sampler = bench.SampleInvocations(*is)
-	}
-
 	statisticFunction := *sfStr
 	var sf statisticFunc
 	switch statisticFunction {
@@ -119,14 +112,38 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		os.Exit(1)
 	}
 
-	return c, *s, *sl, sf, f1, f2, sampler, *rm
+	return c, *s, *sl, sf, f1, f2, *sm, *is, *rm
 }
 
 func main() {
-	cmd, sim, sigLev, sf, f1, f2, sampler, printMem := parseArgs()
+	cmd, sim, sigLev, sf, f1, f2, sm, is, printMem := parseArgs()
 	maxNrWorkers := runtime.NumCPU()
 
-	fmt.Fprintf(os.Stdout, "#Execute CIs:\n# cmd = '%s'\n# number of cores = %d\n# bootstrap simulations = %d\n# significance level = %.2f\n# Statistic = %s\n# file 1 = %s\n# file 2 = %s\n\n", cmd, maxNrWorkers, sim, sigLev, sf.Name, f1, f2)
+	var sampler bench.InvocationSampler
+	var samplingType string
+	if sm {
+		sampler = bench.MeanInvocations
+		samplingType = "Mean"
+	} else if is == -1 {
+		sampler = bench.AllInvocations
+		samplingType = "All"
+	} else {
+		sampler = bench.SampleInvocations(is)
+		samplingType = fmt.Sprintf("%d invocations per iteration", is)
+	}
+
+	var outHeader strings.Builder
+	outHeader.WriteString("#Execute CIs:\n")
+	outHeader.WriteString(fmt.Sprintf("# cmd = %s\n", cmd))
+	outHeader.WriteString(fmt.Sprintf("# number of cores = %d\n", maxNrWorkers))
+	outHeader.WriteString(fmt.Sprintf("# bootstrap simulations = %d\n", sim))
+	outHeader.WriteString(fmt.Sprintf("# significance level = %.2f\n", sigLev))
+	outHeader.WriteString(fmt.Sprintf("# statistic = %s\n", sf.Name))
+	outHeader.WriteString(fmt.Sprintf("# invocation sampling = %s\n", samplingType))
+	outHeader.WriteString(fmt.Sprintf("# files 1 = %s\n", f1))
+	outHeader.WriteString(fmt.Sprintf("# files 2 = %s\n", f2))
+	fmt.Fprint(os.Stdout, outHeader.String())
+	fmt.Fprintln(os.Stdout, "")
 
 	ciFunc := bootstrap.CIFuncSetup(sim, maxNrWorkers, sf.Func, sigLev, sampler)
 	ciRatioFunc := bootstrap.CIRatioFuncSetup(sim, maxNrWorkers, sf.Func, sigLev, sampler)
@@ -155,7 +172,7 @@ func main() {
 func ci(ciFunc bootstrap.CIFunc, fp string, printMem bool) {
 	f, err := os.Open(fp)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not open file '%s'", fp)
+		fmt.Fprintf(os.Stderr, "Could not open file '%s'\n", fp)
 		return
 	}
 
