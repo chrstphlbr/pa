@@ -38,12 +38,11 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, invocationMean bool, invocationSamples int, printMem bool) {
+func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
 	sl := flag.Float64("sig", 0.05, "Significance level")
-	is := flag.Int("is", -1, "Number of invocation samples taken (-1 for all)")
-	sm := flag.Bool("sm", false, "Take mean of all invocation samples. If this flag is provided, -is is invalid")
+	is := flag.Int("is", 0, "Number of invocation samples taken (0 for mean across all invocations, -1 for all, > 0 for number of samples)")
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
 	rm := flag.Bool("mem", false, "Print runtime memory to Stdout")
 	flag.Parse()
@@ -82,8 +81,8 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		}
 	}
 
-	if *is < -1 || *is == 0 {
-		fmt.Fprint(os.Stdout, "Invalid number of invocation samples, must be > 0 (for numer of samples) or -1 for all\n\n")
+	if *is < -1 {
+		fmt.Fprint(os.Stdout, "Invalid number of invocation samples, must be 0 for mean across samples from iteration, > 0 for number of samples, or -1 for all\n\n")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -112,16 +111,16 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		os.Exit(1)
 	}
 
-	return c, *s, *sl, sf, f1, f2, *sm, *is, *rm
+	return c, *s, *sl, sf, f1, f2, *is, *rm
 }
 
 func main() {
-	cmd, sim, sigLev, sf, f1, f2, sm, is, printMem := parseArgs()
+	cmd, sim, sigLev, sf, f1, f2, is, printMem := parseArgs()
 	maxNrWorkers := runtime.NumCPU()
 
 	var sampler bench.InvocationSampler
 	var samplingType string
-	if sm {
+	if is == 0 {
 		sampler = bench.MeanInvocations
 		samplingType = "Mean"
 	} else if is == -1 {
