@@ -10,7 +10,7 @@ const (
 	DefaultTrialsSize      = 5
 	DefaultForksSize       = 10
 	DefaultIterationsSize  = 20
-	DefaultInvocationsSize = 1000
+	DefaultInvocationsSize = 200
 )
 
 var defaultArraySizes = ArraySizes{
@@ -39,16 +39,19 @@ type InvocationsFlat struct {
 }
 
 type ExecutionSlice interface {
-	Slice() [][][][][]float64
+	Slice(InvocationSampler) [][][][][]float64
 	// returns the length of all leaf elements
-	ElementCount() int
+	// ElementCount() int
 }
 
-type Invocations []float64
+type Invocations struct {
+	Count int
+	Value float64
+}
 
 type Iteration struct {
 	ID          int
-	Invocations Invocations
+	Invocations []Invocations
 }
 
 func (i *Iteration) Merge(other *Iteration) error {
@@ -196,7 +199,7 @@ func NewExecutionFromInvocationsFlat(ivf InvocationsFlat) *Execution {
 						Iterations: map[int]*Iteration{
 							itid: {
 								ID:          itid,
-								Invocations: ivf.Invocations,
+								Invocations: []Invocations{ivf.Invocations},
 							},
 						},
 					},
@@ -205,7 +208,7 @@ func NewExecutionFromInvocationsFlat(ivf InvocationsFlat) *Execution {
 		},
 	}
 
-	e.len = len(ivf.Invocations)
+	e.len = ivf.Invocations.Count
 
 	return e
 }
@@ -222,7 +225,7 @@ func (e *Execution) addLen(i int) {
 	e.len += i
 }
 
-func (e *Execution) Slice() [][][][][]float64 {
+func (e *Execution) Slice(s InvocationSampler) [][][][][]float64 {
 	out := make([][][][][]float64, 0, len(e.InstanceIDs))
 
 	for _, iid := range e.InstanceIDs {
@@ -254,7 +257,7 @@ func (e *Execution) Slice() [][][][][]float64 {
 					if !ok {
 						panic(fmt.Sprintf("Invalid state: IterationIDs and Iterations out of sync for %d", itid))
 					}
-					iterationSlice = append(iterationSlice, it.Invocations)
+					iterationSlice = append(iterationSlice, s(it.Invocations))
 				}
 				forkSlice = append(forkSlice, iterationSlice)
 			}
@@ -278,10 +281,13 @@ func (e *Execution) AddInvocations(is InvocationsFlat) error {
 	// create Execution from InvocationsFlat
 	ne := NewExecutionFromInvocationsFlat(is)
 	err := e.Merge(ne)
+	if err != nil {
+		return err
+	}
 
 	e.addLen(ne.len)
 
-	return err
+	return nil
 }
 
 func (e *Execution) Merge(other *Execution) error {

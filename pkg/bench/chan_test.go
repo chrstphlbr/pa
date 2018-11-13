@@ -24,7 +24,7 @@ func benchChan(nr, elems int) bench.Chan {
 					Instance:    "i1",
 					Trial:       nr,
 					Fork:        0,
-					Invocations: bench.Invocations{4, 4, 4, 4, 4, 4, 4, 4, 4},
+					Invocations: bench.Invocations{Count: 8, Value: 4},
 				}),
 			}
 		}
@@ -68,7 +68,7 @@ func TestChanMerge(t *testing.T) {
 			t.Fatalf("Unexpected bench: %+v", eb)
 		}
 
-		sl := ev.Exec.Slice()
+		sl := ev.Exec.Slice(bench.AllInvocations)
 		if len(sl) != 1 {
 			t.Fatalf("Exepected 1 instance")
 		}

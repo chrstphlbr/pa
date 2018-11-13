@@ -5,13 +5,10 @@ import (
 	"math"
 	"sort"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
 	"gonum.org/v1/gonum/stat"
 )
 
 type StatisticFunc func([]float64) float64
-type CIFunc = func(bench.ExecutionSlice, StatisticFunc, float64) CI
-type CIRatioFunc = func(bench.ExecutionSlice, bench.ExecutionSlice, StatisticFunc, float64) CIRatio
 
 type CI struct {
 	Lower float64

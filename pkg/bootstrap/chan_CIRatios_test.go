@@ -16,13 +16,18 @@ func checkChannelEmpty(t *testing.T, rc <-chan bootstrap.CIRatioResult) {
 		t.Fatalf("Result channel has values")
 	}
 }
+
+func ciFuncs(sim, nrWorkers int, sf stat.StatisticFunc, sl float64, sampler bench.InvocationSampler) (bootstrap.CIFunc, bootstrap.CIRatioFunc) {
+	return bootstrap.CIFuncSetup(sim, nrWorkers, sf, sl, sampler), bootstrap.CIRatioFuncSetup(sim, nrWorkers, sf, sl, sampler)
+}
 func TestCIRatiosEmpty(t *testing.T) {
 	bc1 := make(bench.Chan)
 	close(bc1)
 	bc2 := make(bench.Chan)
 	close(bc2)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 1, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	checkChannelEmpty(t, rc)
 }
@@ -50,7 +55,8 @@ func TestCIRatiosNoValues(t *testing.T) {
 		}
 	}()
 
-	rc := bootstrap.CIRatios(bc1, bc2, 1, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	checkChannelEmpty(t, rc)
 }
@@ -84,10 +90,11 @@ func ciRatiosError(t *testing.T, side int) {
 	bc2, execs := createChannel(0, nrExecs)
 
 	var rc <-chan bootstrap.CIRatioResult
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
 	if side == 1 {
-		rc = bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+		rc = bootstrap.CIRatios(bc1, bc2, cif, cirf)
 	} else if side == 2 {
-		rc = bootstrap.CIRatios(bc2, bc1, 2, 1, stat.Mean, 0.05)
+		rc = bootstrap.CIRatios(bc2, bc1, cif, cirf)
 	}
 
 	ev, ok := <-rc
@@ -197,7 +204,8 @@ func TestCIRatios1empty(t *testing.T) {
 	bc2 := make(bench.Chan)
 	close(bc2)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 2
 	checkOneSided(t, rc, ex1, 0, 10, 0, 1)
@@ -210,7 +218,8 @@ func TestCIRatios2empty(t *testing.T) {
 	close(bc1)
 	bc2, ex2 := createChannel(0, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 2
 	checkOneSided(t, rc, ex2, 0, 10, 0, 2)
@@ -222,7 +231,8 @@ func TestCIRatiosValues1earlier(t *testing.T) {
 	bc1, ex1 := createChannel(0, 7)
 	bc2, ex2 := createChannel(0, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// check ratios
 	checkMerged(t, rc, ex1, ex2, 0, 7, 0, 0)
@@ -237,7 +247,8 @@ func TestCIRatiosValues2earlier(t *testing.T) {
 	bc1, ex1 := createChannel(0, 10)
 	bc2, ex2 := createChannel(0, 7)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// check ratios
 	checkMerged(t, rc, ex1, ex2, 0, 7, 0, 0)
@@ -252,7 +263,8 @@ func TestCIRatiosValues1later(t *testing.T) {
 	bc1, ex1 := createChannel(3, 10)
 	bc2, ex2 := createChannel(0, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel
 	checkOneSided(t, rc, ex2, 0, 3, 0, 2)
@@ -267,7 +279,8 @@ func TestCIRatiosValues2later(t *testing.T) {
 	bc1, ex1 := createChannel(0, 10)
 	bc2, ex2 := createChannel(3, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel
 	checkOneSided(t, rc, ex1, 0, 3, 0, 1)
@@ -282,7 +295,8 @@ func TestCIRatiosValues1middle(t *testing.T) {
 	bc1, ex1 := createChannel(3, 7)
 	bc2, ex2 := createChannel(0, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 2 start
 	checkOneSided(t, rc, ex2, 0, 3, 0, 2)
@@ -300,7 +314,8 @@ func TestCIRatiosValues2middle(t *testing.T) {
 	bc1, ex1 := createChannel(0, 10)
 	bc2, ex2 := createChannel(3, 7)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 1 start
 	checkOneSided(t, rc, ex1, 0, 3, 0, 1)
@@ -318,7 +333,8 @@ func TestCIRatiosValues(t *testing.T) {
 	bc1, ex1 := createChannel(0, 7)
 	bc2, ex2 := createChannel(5, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 1
 	checkOneSided(t, rc, ex1, 0, 5, 0, 1)
@@ -354,7 +370,8 @@ func TestCIRatiosValuesGap1(t *testing.T) {
 
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 2
 	checkOneSided(t, rc, ex21, 0, 2, 0, 2)
@@ -375,7 +392,8 @@ func TestCIRatiosValuesGap2(t *testing.T) {
 
 	bc1 := appendChannels(bc11, bc12)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 1
 	checkOneSided(t, rc, ex11, 0, 2, 0, 1)
@@ -398,7 +416,8 @@ func TestCIRatiosValuesInterleaved1(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 1
 	checkOneSided(t, rc, ex11, 0, 2, 0, 1)
@@ -424,7 +443,8 @@ func TestCIRatiosValuesInterleaved2(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 2
 	checkOneSided(t, rc, ex21, 0, 2, 0, 2)
@@ -445,7 +465,8 @@ func TestCIRatiosOverlap1(t *testing.T) {
 	bc1, ex1 := createChannel(0, 7)
 	bc2, ex2 := createChannel(4, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	checkOneSided(t, rc, ex1, 0, 4, 0, 1)
 
@@ -460,7 +481,8 @@ func TestCIRatiosOverlap2(t *testing.T) {
 	bc2, ex2 := createChannel(0, 7)
 	bc1, ex1 := createChannel(4, 10)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	checkOneSided(t, rc, ex2, 0, 4, 0, 2)
 
@@ -480,7 +502,8 @@ func TestCIRatiosValuesInterleavedOverlap1(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 1
 	checkOneSided(t, rc, ex11, 0, 2, 0, 1)
@@ -509,7 +532,8 @@ func TestCIRatiosValuesInterleavedOverlap2(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// sole channel 2
 	checkOneSided(t, rc, ex21, 0, 2, 0, 2)
@@ -539,7 +563,8 @@ func TestCIRatiosValuesInterleavedMultipleOverlap1(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22, bc23)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// merged
 	checkMerged(t, rc, ex11, ex21, 0, 1, 0, 0)
@@ -569,7 +594,8 @@ func TestCIRatiosValuesInterleavedMultipleOverlap2(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12, bc13)
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	// merged
 	checkMerged(t, rc, ex11, ex21, 0, 1, 0, 0)
@@ -598,7 +624,8 @@ func TestCIRatiosTwoOrdered(t *testing.T) {
 	bc1 := appendChannels(bc11, bc12)
 	bc2 := appendChannels(bc21, bc22)
 
-	rc := bootstrap.CIRatios(bc1, bc2, 2, 1, stat.Mean, 0.05)
+	cif, cirf := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIRatios(bc1, bc2, cif, cirf)
 
 	checkMerged(t, rc, ex11, ex21, 0, 10, 0, 0)
 

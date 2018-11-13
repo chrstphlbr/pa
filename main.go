@@ -37,11 +37,14 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string) {
+func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, sampler bench.InvocationSampler, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
 	sl := flag.Float64("sig", 0.05, "Significance level")
+	is := flag.Int("is", -1, "Number of invocation samples taken (-1 for all)")
+	sm := flag.Bool("sm", false, "Take mean of all invocation samples. If this flag is provided, -is is invalid")
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
+	rm := flag.Bool("mem", false, "Print runtime memory to Stdout")
 	flag.Parse()
 
 	args := flag.Args()
@@ -78,6 +81,20 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		}
 	}
 
+	if *is < -1 || *is == 0 {
+		fmt.Fprint(os.Stdout, "Invalid number of invocation samples, must be > 0 (for numer of samples) or -1 for all\n\n")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	if *sm {
+		sampler = bench.MeanInvocations
+	} else if *is == -1 {
+		sampler = bench.AllInvocations
+	} else {
+		sampler = bench.SampleInvocations(*is)
+	}
+
 	statisticFunction := *sfStr
 	var sf statisticFunc
 	switch statisticFunction {
@@ -102,24 +119,27 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		os.Exit(1)
 	}
 
-	return c, *s, *sl, sf, f1, f2
+	return c, *s, *sl, sf, f1, f2, sampler, *rm
 }
 
 func main() {
-	cmd, sim, sigLev, sf, f1, f2 := parseArgs()
+	cmd, sim, sigLev, sf, f1, f2, sampler, printMem := parseArgs()
 	maxNrWorkers := runtime.NumCPU()
 
 	fmt.Fprintf(os.Stdout, "#Execute CIs:\n# cmd = '%s'\n# number of cores = %d\n# bootstrap simulations = %d\n# significance level = %.2f\n# Statistic = %s\n# file 1 = %s\n# file 2 = %s\n\n", cmd, maxNrWorkers, sim, sigLev, sf.Name, f1, f2)
+
+	ciFunc := bootstrap.CIFuncSetup(sim, maxNrWorkers, sf.Func, sigLev, sampler)
+	ciRatioFunc := bootstrap.CIRatioFuncSetup(sim, maxNrWorkers, sf.Func, sigLev, sampler)
 
 	var exec func()
 	switch cmd {
 	case cmdCI:
 		exec = func() {
-			ci(sim, maxNrWorkers, sigLev, sf.Func, f1[0])
+			ci(ciFunc, f1[0], printMem)
 		}
 	case cmdDet:
 		exec = func() {
-			det(sim, maxNrWorkers, sigLev, sf.Func, f1, f2)
+			det(ciFunc, ciRatioFunc, f1, f2, printMem)
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "Invalid command '%s' (available: 'ci' and 'det')\n\n", cmd)
@@ -132,7 +152,7 @@ func main() {
 	fmt.Fprintf(os.Stdout, "#Total execution took %v\n", time.Since(start))
 }
 
-func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string) {
+func ci(ciFunc bootstrap.CIFunc, fp string, printMem bool) {
 	f, err := os.Open(fp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open file '%s'", fp)
@@ -148,7 +168,9 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 		return
 	}
 
-	rc := bootstrap.CIs(c, sim, nrWorkers, sf, sigLev)
+	rc := bootstrap.CIs(c, ciFunc)
+
+	printMemStats(printMem)
 
 	for res := range rc {
 		if res.Err != nil {
@@ -158,10 +180,11 @@ func ci(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp string
 		b := res.Benchmark
 		ci := res.CI
 		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
+		printMemStats(printMem)
 	}
 }
 
-func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2 []string) {
+func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []string, printMem bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -177,7 +200,9 @@ func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2
 		return
 	}
 
-	rc := bootstrap.CIRatios(c1, c2, sim, nrWorkers, sf, sigLev)
+	rc := bootstrap.CIRatios(c1, c2, ciFunc, ciRatioFunc)
+
+	printMemStats(printMem)
 
 	for res := range rc {
 		if res.Err != nil {
@@ -195,6 +220,7 @@ func det(sim int, nrWorkers int, sigLev float64, sf stat.StatisticFunc, fp1, fp2
 			cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
 			cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
 		)
+		printMemStats(printMem)
 	}
 }
 
@@ -213,4 +239,12 @@ func mergedInput(ctx context.Context, fs []string) (bench.Chan, error) {
 		chans = append(chans, c1)
 	}
 	return bench.MergeChans(chans...), nil
+}
+
+func printMemStats(print bool) {
+	if print {
+		ms := &runtime.MemStats{}
+		runtime.ReadMemStats(ms)
+		fmt.Fprintf(os.Stdout, "# current memory consumption: sys=%d, heapAlloc=%d, heapInuse=%d, stackInuse=%d, numGCs=%d\n", ms.Sys, ms.HeapAlloc, ms.HeapInuse, ms.StackInuse, ms.NumGC)
+	}
 }

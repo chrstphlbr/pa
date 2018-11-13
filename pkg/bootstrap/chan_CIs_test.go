@@ -13,7 +13,8 @@ func TestCIsEmpty(t *testing.T) {
 	bc := make(bench.Chan)
 	close(bc)
 
-	rc := bootstrap.CIs(bc, 1, 1, stat.Mean, 0.05)
+	cif, _ := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIs(bc, cif)
 
 	_, ok := <-rc
 	if ok {
@@ -33,7 +34,8 @@ func TestCIsNoValues(t *testing.T) {
 		}
 	}()
 
-	rc := bootstrap.CIs(bc, 1, 1, stat.Mean, 0.05)
+	cif, _ := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIs(bc, cif)
 
 	_, ok := <-rc
 	if ok {
@@ -62,7 +64,8 @@ func TestCIsError(t *testing.T) {
 		}
 	}()
 
-	rc := bootstrap.CIs(bc, 1, 1, stat.Mean, 0.05)
+	cif, _ := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIs(bc, cif)
 
 	ev, ok := <-rc
 	if !ok {
@@ -98,7 +101,7 @@ func createChannelStartEndDetail(from, to int, start, end bool, instance string,
 			Trial:       trial,
 			Fork:        fork,
 			Iteration:   iteration,
-			Invocations: bench.Invocations{4.0, 4.0, 4.0, 4.0, 4.0},
+			Invocations: bench.Invocations{Count: 5, Value: 4.0},
 		})
 		execs = append(execs, e)
 	}
@@ -130,7 +133,8 @@ func createChannelStartEndDetail(from, to int, start, end bool, instance string,
 func TestCIsValues(t *testing.T) {
 	bc, execs := createChannel(0, 10)
 
-	rc := bootstrap.CIs(bc, 2, 1, stat.Mean, 0.05)
+	cif, _ := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	rc := bootstrap.CIs(bc, cif)
 
 	for i, e := range execs {
 		ev, ok := <-rc

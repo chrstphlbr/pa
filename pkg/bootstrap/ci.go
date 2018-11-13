@@ -16,23 +16,26 @@ import (
 	"gonum.org/v1/gonum/stat/sampleuv"
 )
 
-func CIRatioFunc(iters int, maxNrWorkers int) st.CIRatioFunc {
-	return func(executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, statFunc st.StatisticFunc, significanceLevel float64) st.CIRatio {
-		return CIRatio(iters, maxNrWorkers, statFunc, executionsA, executionsB, significanceLevel)
+type CIFunc = func(bench.ExecutionSlice) st.CI
+type CIRatioFunc = func(bench.ExecutionSlice, bench.ExecutionSlice) st.CIRatio
+
+func CIRatioFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, significanceLevel float64, sampler bench.InvocationSampler) CIRatioFunc {
+	return func(executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice) st.CIRatio {
+		return CIRatio(iters, maxNrWorkers, statFunc, significanceLevel, executionsA, executionsB, sampler)
 	}
 }
 
-func CIFunc(iters int, maxNrWorkers int) st.CIFunc {
-	return func(executions bench.ExecutionSlice, statFunc st.StatisticFunc, significanceLevel float64) st.CI {
-		return CI(iters, maxNrWorkers, statFunc, executions, significanceLevel)
+func CIFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, significanceLevel float64, sampler bench.InvocationSampler) CIFunc {
+	return func(executions bench.ExecutionSlice) st.CI {
+		return CI(iters, maxNrWorkers, statFunc, significanceLevel, executions, sampler)
 	}
 }
 
-func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, significanceLevel float64) st.CIRatio {
-	simStatA := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsA)
+func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, sampler bench.InvocationSampler) st.CIRatio {
+	simStatA := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsA, sampler)
 	ciA := ci(simStatA, significanceLevel)
 
-	simStatB := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsB)
+	simStatB := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsB, sampler)
 	ciB := ci(simStatB, significanceLevel)
 
 	lSimA := len(simStatA)
@@ -54,8 +57,8 @@ func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, execut
 	}
 }
 
-func CI(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, significanceLevel float64) st.CI {
-	simStat := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executions)
+func CI(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executions bench.ExecutionSlice, sampler bench.InvocationSampler) st.CI {
+	simStat := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executions, sampler)
 	return ci(simStat, significanceLevel)
 }
 
@@ -81,7 +84,7 @@ func ci(d []float64, significanceLevel float64) st.CI {
 	}
 }
 
-func simulatedStatistics(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice) []float64 {
+func simulatedStatistics(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, sampler bench.InvocationSampler) []float64 {
 	// create workers
 	var wg sync.WaitGroup
 	wg.Add(iters)
@@ -102,7 +105,7 @@ func simulatedStatistics(iters int, maxNrWorkers int, statisticFunc st.Statistic
 				select {
 				case _, ok := <-workChan:
 					if ok {
-						rs := randomResampling(executions)
+						rs := randomResampling(executions, sampler)
 						samplingChan <- rs
 						wg.Done()
 					} else {
@@ -132,13 +135,14 @@ func simulatedStatistics(iters int, maxNrWorkers int, statisticFunc st.Statistic
 	return simStat
 }
 
-func randomResampling(d bench.ExecutionSlice) []float64 {
-	s := d.Slice()
+func randomResampling(d bench.ExecutionSlice, sampler bench.InvocationSampler) []float64 {
+	s := d.Slice(sampler)
 
 	lis := len(s)
 	isample := sampleSize(lis)
 
-	ret := make([]float64, 0, d.ElementCount())
+	var ret []float64
+	// ret := make([]float64, 0, d.ElementCount())
 
 	for _, i := range isample {
 		trials := s[i]

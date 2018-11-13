@@ -153,9 +153,9 @@ func TestFromCSVSingleInvs(t *testing.T) {
 
 func writeInvocations(t *testing.T, w *csv.Writer, b *bench.B, ins string, trial, fork, iter, nrinvs int) {
 	invs := createInvocationsFlat(nrinvs, b, ins, trial, fork, iter)
-	for _, inv := range invs.Invocations {
+	for _, iv := range invs {
 		//[]string{"project", "commit", "benchmark", "params", "instance", "trial", "fork", "iteration", "mode", "unit", "value_count", "value"}
-		err := w.Write([]string{"", "", invs.Benchmark.Name, "", invs.Instance, strconv.Itoa(invs.Trial), strconv.Itoa(invs.Fork), strconv.Itoa(invs.Iteration), "", "", "1", strconv.FormatFloat(inv, 'e', -1, 64)})
+		err := w.Write([]string{"", "", iv.Benchmark.Name, "", iv.Instance, strconv.Itoa(iv.Trial), strconv.Itoa(iv.Fork), strconv.Itoa(iv.Iteration), "", "", strconv.Itoa(iv.Invocations.Count), strconv.FormatFloat(iv.Invocations.Value, 'e', -1, 64)})
 		if err != nil {
 			t.Fatalf("Could not write to CSV: %v", err)
 		}

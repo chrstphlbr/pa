@@ -10,50 +10,53 @@ import (
 
 // creating
 
-type invGen func(int) bench.Invocations
+type invGen func(int) []bench.Invocations
 
-func createRandomInvocations(count int) bench.Invocations {
+func createRandomInvocations(count int) []bench.Invocations {
 	const (
 		min = 0.0
 		max = 10000.0
 	)
-
-	is := bench.Invocations{}
-	for i := 0; i < 10; i++ {
-		r := min + rand.Float64()*(max-min)
-		is = append(is, r)
-	}
-	return is
-}
-
-func createInvocations(count int) bench.Invocations {
-	is := bench.Invocations{}
+	is := make([]bench.Invocations, count)
 	for i := 0; i < count; i++ {
-		is = append(is, float64(i))
+		r := min + rand.Float64()*(max-min)
+		is[i] = bench.Invocations{Count: 1, Value: r}
 	}
 	return is
 }
 
-func createInvocationsFlatGenerator(count int, b *bench.B, ins string, t, f, i int, invGen invGen) bench.InvocationsFlat {
+func createInvocations(count int) []bench.Invocations {
+	is := make([]bench.Invocations, count)
+	for i := 0; i < count; i++ {
+		is[i] = bench.Invocations{Count: 1, Value: float64(i)}
+	}
+	return is
+}
+
+func createInvocationsFlatGenerator(count int, b *bench.B, ins string, t, f, i int, invGen invGen) []bench.InvocationsFlat {
 	is := invGen(count)
 
-	return bench.InvocationsFlat{
-		Benchmark:   b,
-		Instance:    ins,
-		Trial:       t,
-		Fork:        f,
-		Iteration:   i,
-		Invocations: is,
+	ivs := make([]bench.InvocationsFlat, len(is))
+	for j, iv := range is {
+		ivs[j] = bench.InvocationsFlat{
+			Benchmark:   b,
+			Instance:    ins,
+			Trial:       t,
+			Fork:        f,
+			Iteration:   i,
+			Invocations: iv,
+		}
 	}
+	return ivs
 }
 
-func createInvocationsFlat(count int, b *bench.B, ins string, t, f, i int) bench.InvocationsFlat {
+func createInvocationsFlat(count int, b *bench.B, ins string, t, f, i int) []bench.InvocationsFlat {
 	return createInvocationsFlatGenerator(count, b, ins, t, f, i, createInvocations)
 }
 
-func createRandomInvocationsFlat(count int, b *bench.B, ins string, t, f, i int) bench.InvocationsFlat {
-	return createInvocationsFlatGenerator(count, b, ins, t, f, i, createRandomInvocations)
-}
+// func createRandomInvocationsFlat(count int, b *bench.B, ins string, t, f, i int) bench.InvocationsFlat {
+// 	return createInvocationsFlatGenerator(count, b, ins, t, f, i, createRandomInvocations)
+// }
 
 // checking
 
@@ -152,8 +155,11 @@ func checkIteration(t *testing.T, i *bench.Iteration, nrivs int, enrinvs int) {
 
 	for i, v := range i.Invocations {
 		expected := float64(i % nrivs)
-		if v != expected {
-			t.Fatalf("Unexepected invocations value %f, expected %f", v, expected)
+		if v.Count != 1 {
+			t.Fatalf("Expected invocation count to be %d, was %d", 1, v.Count)
+		}
+		if v.Value != expected {
+			t.Fatalf("Unexepected invocations value %f, expected %f", v.Value, expected)
 		}
 	}
 }
@@ -161,6 +167,7 @@ func checkIteration(t *testing.T, i *bench.Iteration, nrivs int, enrinvs int) {
 // printing
 
 func printExecution(e *bench.Execution) {
+	fmt.Printf("\n== %+v ==\n", e.Benchmark)
 	for _, ins := range e.Instances {
 		fmt.Printf("- %s\n", ins.ID)
 		for _, t := range ins.Trials {
@@ -170,7 +177,7 @@ func printExecution(e *bench.Execution) {
 				for _, it := range f.Iterations {
 					fmt.Printf("   - i%d\n", it.ID)
 					for _, iv := range it.Invocations {
-						fmt.Printf("    - %f\n", iv)
+						fmt.Printf("    - %+v\n", iv)
 					}
 				}
 			}
@@ -180,7 +187,6 @@ func printExecution(e *bench.Execution) {
 
 func printExecutions(es []*bench.Execution) {
 	for _, e := range es {
-		fmt.Printf("\n== %+v ==\n", e.Benchmark)
 		printExecution(e)
 	}
 }

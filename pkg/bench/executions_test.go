@@ -46,14 +46,25 @@ func TestNewExecutionEmpty(t *testing.T) {
 
 // AddInvocations
 
+func addInvocationsHelper(t *testing.T, e *bench.Execution, ivs []bench.InvocationsFlat) {
+	for i, is := range ivs {
+		err := e.AddInvocations(is)
+		if err != nil {
+			t.Fatalf("Could not add (pos=%d): %v", i, err)
+		}
+	}
+}
+
 func TestAddInvocationsInvalidBench(t *testing.T) {
 	e := bench.NewExecution(b)
 
 	is := createInvocationsFlat(20, b2, "", 1, 1, 1)
 
-	err := e.AddInvocations(is)
-	if err == nil {
-		t.Fatal()
+	for _, iv := range is {
+		err := e.AddInvocations(iv)
+		if err == nil {
+			t.Fatalf("Expected error as the benchmarks are different")
+		}
 	}
 }
 
@@ -65,10 +76,7 @@ func TestAddInvocationsFirst(t *testing.T) {
 
 	is := createInvocationsFlat(nrivs, b, in, 1, 1, 1)
 
-	err := e.AddInvocations(is)
-	if err != nil {
-		t.Fatalf("Could not add: %v", err)
-	}
+	addInvocationsHelper(t, e, is)
 
 	checkInstance(t, e, in, nrivs, 1, 1, 1, 1, nrivs)
 }
@@ -78,16 +86,10 @@ func addInvocation(t *testing.T, ins1, ins2 string, t1, t2, f1, f2, i1, i2 int) 
 	nrivs := 20
 	is := createInvocationsFlat(nrivs, b, ins1, t1, f1, i1)
 
-	err := e.AddInvocations(is)
-	if err != nil {
-		t.Fatal()
-	}
+	addInvocationsHelper(t, e, is)
 
 	is = createInvocationsFlat(nrivs, b, ins2, t2, f2, i2)
-	err = e.AddInvocations(is)
-	if err != nil {
-		t.Fatal()
-	}
+	addInvocationsHelper(t, e, is)
 
 	doubleInvs := true
 

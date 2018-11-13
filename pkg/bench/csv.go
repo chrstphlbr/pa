@@ -175,17 +175,15 @@ func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 		return nil, fmt.Errorf("Could not parse 'value': %v", err)
 	}
 
-	is := make([]float64, vc)
-	for i := 0; i < vc; i++ {
-		is[i] = v
-	}
-
 	return &InvocationsFlat{
-		Benchmark:   b,
-		Instance:    rec[4],
-		Trial:       t,
-		Fork:        f,
-		Iteration:   i,
-		Invocations: is,
+		Benchmark: b,
+		Instance:  rec[4],
+		Trial:     t,
+		Fork:      f,
+		Iteration: i,
+		Invocations: Invocations{
+			Count: vc,
+			Value: v,
+		},
 	}, nil
 }
