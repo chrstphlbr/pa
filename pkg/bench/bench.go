@@ -140,8 +140,10 @@ func (pp *PerfParams) Add(param, value string) {
 	pp.keys = append(pp.keys, param)
 	sort.Strings(pp.keys)
 	pp.params[param] = value
-	if len(pp.keys) != len(pp.params) {
-		panic(fmt.Sprintf("Illegal state for: performance-parameter data structures out of sync"))
+	lk := len(pp.keys)
+	lp := len(pp.params)
+	if lk != lp {
+		panic(fmt.Sprintf("Illegal state for: performance-parameter data structures out of sync (keys=%d, values=%d)", lk, lp))
 	}
 }
 

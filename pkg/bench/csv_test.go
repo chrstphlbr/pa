@@ -128,6 +128,107 @@ func TestFromCSVHeaderAndComma(t *testing.T) {
 	}
 }
 
+func TestFromCSVPerfParams(t *testing.T) {
+	w, sb := header(t)
+	w.Write([]string{"", "", "b1", "p1=1", "i1", "1", "1", "1", "sample", "ms/op", "1", "1.0"})
+	w.Write([]string{"", "", "b1", "p1=1,p2=2", "i1", "1", "1", "1", "sample", "ms/op", "1", "1.0"})
+	w.Write([]string{"", "", "b1", "p1=1,1,p2=2,1", "i1", "1", "1", "1", "sample", "ms/op", "1", "1.0"})
+	w.Write([]string{"", "", "b1", "p1=1,1,p2=2,1,p3=3,1", "i1", "1", "1", "1", "sample", "ms/op", "1", "1.0"})
+	w.Flush()
+	sr := strings.NewReader(sb.String())
+	es, err := fromCSVHelper(t, sr, 4, false)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	if l := len(es); l != 4 {
+		t.Fatalf("Expected 4 execution values, got %d", l)
+	}
+
+	ex1 := es[0]
+	ex1PP := ex1.Benchmark.PerfParams
+	if l := len(ex1PP.Keys()); l != 1 {
+		t.Fatalf("Expected 1 perf param, got %d", l)
+	}
+	ex1p1val, ok := ex1PP.Get()["p1"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p1")
+	}
+	if ex1p1val != "1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "1", "p1")
+	}
+
+	ex2 := es[1]
+	ex2PP := ex2.Benchmark.PerfParams
+	if l := len(ex2PP.Keys()); l != 2 {
+		t.Fatalf("Expected 2 perf param, got %d", l)
+	}
+
+	ex2p1val, ok := ex2PP.Get()["p1"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p1")
+	}
+	if ex2p1val != "1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "1", "p1")
+	}
+	ex2p2val, ok := ex2PP.Get()["p2"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p2")
+	}
+	if ex2p2val != "2" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "2", "p2")
+	}
+
+	ex3 := es[2]
+	ex3PP := ex3.Benchmark.PerfParams
+	if l := len(ex3PP.Keys()); l != 2 {
+		t.Fatalf("Expected 2 perf param, got %d", l)
+	}
+
+	ex3p1val, ok := ex3PP.Get()["p1"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p1")
+	}
+	if ex3p1val != "1,1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "1,1", "p1")
+	}
+	ex3p2val, ok := ex3PP.Get()["p2"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p2")
+	}
+	if ex3p2val != "2,1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "2,1", "p2")
+	}
+
+	ex4 := es[3]
+	ex4PP := ex4.Benchmark.PerfParams
+	if l := len(ex4PP.Keys()); l != 3 {
+		t.Fatalf("Expected 3 perf param, got %d", l)
+	}
+
+	ex4p1val, ok := ex4PP.Get()["p1"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p1")
+	}
+	if ex4p1val != "1,1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "1,1", "p1")
+	}
+	ex4p2val, ok := ex4PP.Get()["p2"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p2")
+	}
+	if ex4p2val != "2,1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "2,1", "p2")
+	}
+	ex4p3val, ok := ex4PP.Get()["p3"]
+	if !ok {
+		t.Fatalf("Expected value for perf param '%s'", "p3")
+	}
+	if ex4p3val != "3,1" {
+		t.Fatalf("Expected perf-param value %s for '%s'", "3,1", "p3")
+	}
+}
+
 func TestFromCSVSingleInvs(t *testing.T) {
 	w, sb := header(t)
 

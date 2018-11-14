@@ -133,13 +133,23 @@ func csvBenchExec(rec []string) (*InvocationsFlat, error) {
 
 	// params
 	if rawps := rec[3]; rawps != "" {
-		rawpsSplitted := strings.Split(rawps, ",")
-		for _, rawp := range rawpsSplitted {
-			p := strings.Split(rawp, "=")
-			if len(p) != 2 {
-				return nil, fmt.Errorf("Invalid JMH parameter (%s): '%s'", b.Name, rawp)
+		rawpsSplitted := strings.Split(rawps, "=")
+		var prevKey string
+		for i := 0; i < len(rawpsSplitted); i++ {
+			el := rawpsSplitted[i]
+			if i == 0 {
+				// first element -> only key
+				prevKey = el
+			} else if i == len(rawpsSplitted)-1 {
+				// last element -> value only
+				b.PerfParams.Add(prevKey, el)
+			} else {
+				// any middle element -> value,key
+				lastComma := strings.LastIndex(el, ",")
+				v := el[:lastComma]
+				b.PerfParams.Add(prevKey, v)
+				prevKey = el[lastComma+1:]
 			}
-			b.PerfParams.Add(p[0], p[1])
 		}
 	}
 
