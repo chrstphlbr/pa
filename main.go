@@ -191,6 +191,7 @@ func ci(ciFunc bootstrap.CIFunc, fp string, printMem bool) {
 	for res := range rc {
 		if res.Err != nil {
 			fmt.Fprintf(os.Stderr, "Error while retrieving CI result: %v", res.Err)
+			continue
 		}
 
 		b := res.Benchmark
@@ -223,7 +224,7 @@ func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []
 	for res := range rc {
 		if res.Err != nil {
 			fmt.Fprintf(os.Stderr, "Error while retrieving CI result: %v\n", res.Err)
-			return
+			continue
 		}
 
 		b := res.Benchmark

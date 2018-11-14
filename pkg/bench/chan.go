@@ -37,11 +37,10 @@ func MergeChans(cs ...Chan) Chan {
 
 		for active != 0 {
 		ChanLoop:
-			for i, c := range cs {
+			for _, c := range cs {
 				ev, ok := <-c
 				if !ok {
 					// remove channel from array of channels
-					cs = append(cs[:i], cs[i+1:]...)
 					continue
 				}
 
