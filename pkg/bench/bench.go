@@ -21,6 +21,23 @@ func New(name string) *B {
 	}
 }
 
+func (b *B) String() string {
+	var sb strings.Builder
+	sb.WriteString(b.Name)
+	sb.WriteString("(")
+	for i, fp := range b.FunctionParams {
+		if i != 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(fp)
+	}
+	sb.WriteString(")")
+	sb.WriteString("{")
+	sb.WriteString(b.PerfParams.String())
+	sb.WriteString("}")
+	return sb.String()
+}
+
 func (b *B) Equals(other *B) bool {
 	return b.Compare(other) == 0
 }
@@ -164,16 +181,13 @@ func (pp *PerfParams) String() string {
 	defer pp.l.RUnlock()
 	var sb strings.Builder
 
-	first := true
-	for _, k := range pp.keys {
+	for i, k := range pp.keys {
 		v, ok := pp.params[k]
 		if !ok {
 			panic(fmt.Sprintf("Illegal state for: performance-parameter data structures out of sync"))
 		}
 
-		if first {
-			first = false
-		} else {
+		if i != 0 {
 			sb.WriteString(",")
 		}
 
