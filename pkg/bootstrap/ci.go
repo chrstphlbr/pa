@@ -32,11 +32,11 @@ func CIFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, signifi
 }
 
 func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, sampler bench.InvocationSampler) st.CIRatio {
-	simStatA := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsA, sampler)
-	ciA := ci(simStatA, significanceLevel)
+	metricA, simStatA := metricAndSimulations(iters, maxNrWorkers, statisticFunc, significanceLevel, executionsA, sampler)
+	ciA := ci(metricA, simStatA, significanceLevel)
 
-	simStatB := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executionsB, sampler)
-	ciB := ci(simStatB, significanceLevel)
+	metricB, simStatB := metricAndSimulations(iters, maxNrWorkers, statisticFunc, significanceLevel, executionsB, sampler)
+	ciB := ci(metricB, simStatB, significanceLevel)
 
 	lSimA := len(simStatA)
 	lSimB := len(simStatB)
@@ -49,20 +49,45 @@ func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, signif
 		ratio := simStatB[i] / simStatA[i]
 		ratios = append(ratios, ratio)
 	}
+	ratioMetric := statisticFunc(ratios)
 
 	return st.CIRatio{
 		CIA:     ciA,
 		CIB:     ciB,
-		CIRatio: ci(ratios, significanceLevel),
+		CIRatio: ci(ratioMetric, ratios, significanceLevel),
 	}
 }
 
 func CI(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executions bench.ExecutionSlice, sampler bench.InvocationSampler) st.CI {
-	simStat := simulatedStatistics(iters, maxNrWorkers, statisticFunc, executions, sampler)
-	return ci(simStat, significanceLevel)
+	metric, simStat := metricAndSimulations(iters, maxNrWorkers, statisticFunc, significanceLevel, executions, sampler)
+	return ci(metric, simStat, significanceLevel)
 }
 
-func ci(d []float64, significanceLevel float64) st.CI {
+func metricAndSimulations(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executions bench.ExecutionSlice, sampler bench.InvocationSampler) (metric float64, simStat []float64) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		metric = benchMetric(executions, statisticFunc)
+		wg.Done()
+	}()
+	go func() {
+		simStat = simulatedStatistics(iters, maxNrWorkers, statisticFunc, executions, sampler)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	return metric, simStat
+}
+
+func benchMetric(executions bench.ExecutionSlice, statisticFunc st.StatisticFunc) float64 {
+	meanIterations := executions.FlatSlice(bench.MeanInvocations)
+	metric := statisticFunc(meanIterations)
+	return metric
+}
+
+func ci(metric float64, d []float64, significanceLevel float64) st.CI {
 	sl := st.SigLevel(significanceLevel)
 
 	slhalf := sl / 2
@@ -78,9 +103,10 @@ func ci(d []float64, significanceLevel float64) st.CI {
 	uq := d[uqi]
 
 	return st.CI{
-		Lower: lq,
-		Upper: uq,
-		Level: 1 - sl,
+		Metric: metric,
+		Lower:  lq,
+		Upper:  uq,
+		Level:  1 - sl,
 	}
 }
 

@@ -11,9 +11,10 @@ import (
 type StatisticFunc func([]float64) float64
 
 type CI struct {
-	Lower float64
-	Upper float64
-	Level float64
+	Metric float64
+	Lower  float64
+	Upper  float64
+	Level  float64
 }
 
 type CIRatio struct {

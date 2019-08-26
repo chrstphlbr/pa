@@ -40,6 +40,7 @@ type InvocationsFlat struct {
 
 type ExecutionSlice interface {
 	Slice(InvocationSampler) [][][][][]float64
+	FlatSlice(InvocationSampler) []float64
 	// returns the length of all leaf elements
 	// ElementCount() int
 }
@@ -155,6 +156,8 @@ func (i *Instance) Merge(other *Instance) error {
 	return nil
 }
 
+var _ ExecutionSlice = &Execution{}
+
 type Execution struct {
 	Benchmark   *B
 	InstanceIDs []string
@@ -264,6 +267,41 @@ func (e *Execution) Slice(s InvocationSampler) [][][][][]float64 {
 			trialSlice = append(trialSlice, forkSlice)
 		}
 		out = append(out, trialSlice)
+	}
+
+	return out
+}
+
+func (e *Execution) FlatSlice(s InvocationSampler) []float64 {
+	out := make([]float64, 0, len(e.InstanceIDs))
+
+	for _, iid := range e.InstanceIDs {
+		i, ok := e.Instances[iid]
+		if !ok {
+			panic(fmt.Sprintf("Invalid state: InstanceIDs and Instances out of sync for %s", iid))
+		}
+
+		for _, tid := range i.TrialIDs {
+			t, ok := i.Trials[tid]
+			if !ok {
+				panic(fmt.Sprintf("Invalid state: TrialIDs and Trials out of sync for %d", tid))
+			}
+
+			for _, fid := range t.ForkIDs {
+				f, ok := t.Forks[fid]
+				if !ok {
+					panic(fmt.Sprintf("Invalid state: ForkIDs and Forks out of sync for %d", fid))
+				}
+
+				for _, itid := range f.IterationIDs {
+					it, ok := f.Iterations[itid]
+					if !ok {
+						panic(fmt.Sprintf("Invalid state: IterationIDs and Iterations out of sync for %d", itid))
+					}
+					out = append(out, s(it.Invocations)...)
+				}
+			}
+		}
 	}
 
 	return out

@@ -38,12 +38,13 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, printMem bool) {
+func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, outputMetric bool, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
 	sl := flag.Float64("sig", 0.05, "Significance level")
 	is := flag.Int("is", 0, "Number of invocation samples taken (0 for mean across all invocations, -1 for all, > 0 for number of samples)")
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
+	om := flag.Bool("om", false, "Include statistic/metric (e.g., mean of benchmark) in output")
 	rm := flag.Bool("mem", false, "Print runtime memory to Stdout")
 	flag.Parse()
 
@@ -111,11 +112,11 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		os.Exit(1)
 	}
 
-	return c, *s, *sl, sf, f1, f2, *is, *rm
+	return c, *s, *sl, sf, f1, f2, *is, *om, *rm
 }
 
 func main() {
-	cmd, sim, sigLev, sf, f1, f2, is, printMem := parseArgs()
+	cmd, sim, sigLev, sf, f1, f2, is, outputMetric, printMem := parseArgs()
 	maxNrWorkers := runtime.NumCPU()
 
 	var sampler bench.InvocationSampler
@@ -138,6 +139,7 @@ func main() {
 	outHeader.WriteString(fmt.Sprintf("# bootstrap simulations = %d\n", sim))
 	outHeader.WriteString(fmt.Sprintf("# significance level = %.2f\n", sigLev))
 	outHeader.WriteString(fmt.Sprintf("# statistic = %s\n", sf.Name))
+	outHeader.WriteString(fmt.Sprintf("# include statistic in output = %t\n", outputMetric))
 	outHeader.WriteString(fmt.Sprintf("# invocation sampling = %s\n", samplingType))
 	outHeader.WriteString(fmt.Sprintf("# files 1 = %s\n", f1))
 	outHeader.WriteString(fmt.Sprintf("# files 2 = %s\n", f2))
@@ -151,11 +153,11 @@ func main() {
 	switch cmd {
 	case cmdCI:
 		exec = func() {
-			ci(ciFunc, f1[0], printMem)
+			ci(ciFunc, f1[0], outputMetric, printMem)
 		}
 	case cmdDet:
 		exec = func() {
-			det(ciFunc, ciRatioFunc, f1, f2, printMem)
+			det(ciFunc, ciRatioFunc, f1, f2, outputMetric, printMem)
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "Invalid command '%s' (available: 'ci' and 'det')\n\n", cmd)
@@ -168,7 +170,7 @@ func main() {
 	fmt.Fprintf(os.Stdout, "#Total execution took %v\n", time.Since(start))
 }
 
-func ci(ciFunc bootstrap.CIFunc, fp string, printMem bool) {
+func ci(ciFunc bootstrap.CIFunc, fp string, outputMetric, printMem bool) {
 	f, err := os.Open(fp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open file '%s'\n", fp)
@@ -196,12 +198,18 @@ func ci(ciFunc bootstrap.CIFunc, fp string, printMem bool) {
 
 		b := res.Benchmark
 		ci := res.CI
-		fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
+		if outputMetric {
+			// include statistic/metric in output
+			fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Metric, ci.Lower, ci.Upper, ci.Level)
+		} else {
+			// only print CIs
+			fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
+		}
 		printMemStats(printMem)
 	}
 }
 
-func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []string, printMem bool) {
+func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []string, outputMetric, printMem bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -229,14 +237,27 @@ func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []
 
 		b := res.Benchmark
 		cir := res.CIRatio
-		fmt.Fprintf(
-			os.Stdout,
-			"%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n",
-			b.Name, b.FunctionParams, b.PerfParams,
-			cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
-			cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
-			cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
-		)
+		if outputMetric {
+			// include statistic/metric in output
+			fmt.Fprintf(
+				os.Stdout,
+				"%s;%s;%s;%e;%e;%e;%.2f;%e;%e;%e;%.2f;%e;%e;%e;%.2f\n",
+				b.Name, b.FunctionParams, b.PerfParams,
+				cir.CIA.Metric, cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
+				cir.CIB.Metric, cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
+				cir.CIRatio.Metric, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
+			)
+		} else {
+			// only print CIs
+			fmt.Fprintf(
+				os.Stdout,
+				"%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n",
+				b.Name, b.FunctionParams, b.PerfParams,
+				cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
+				cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
+				cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
+			)
+		}
 		printMemStats(printMem)
 	}
 }
