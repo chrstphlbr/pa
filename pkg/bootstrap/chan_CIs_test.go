@@ -13,7 +13,7 @@ func TestCIsEmpty(t *testing.T) {
 	bc := make(bench.Chan)
 	close(bc)
 
-	cif, _ := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	cif, _ := ciFuncs(1, 1, stat.Mean, []float64{0.05, 0.01}, bench.AllInvocations)
 	rc := bootstrap.CIs(bc, cif)
 
 	_, ok := <-rc
@@ -34,7 +34,7 @@ func TestCIsNoValues(t *testing.T) {
 		}
 	}()
 
-	cif, _ := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	cif, _ := ciFuncs(1, 1, stat.Mean, []float64{0.05, 0.01}, bench.AllInvocations)
 	rc := bootstrap.CIs(bc, cif)
 
 	_, ok := <-rc
@@ -64,7 +64,7 @@ func TestCIsError(t *testing.T) {
 		}
 	}()
 
-	cif, _ := ciFuncs(1, 1, stat.Mean, 0.05, bench.AllInvocations)
+	cif, _ := ciFuncs(1, 1, stat.Mean, []float64{0.05, 0.01}, bench.AllInvocations)
 	rc := bootstrap.CIs(bc, cif)
 
 	ev, ok := <-rc
@@ -133,7 +133,9 @@ func createChannelStartEndDetail(from, to int, start, end bool, instance string,
 func TestCIsValues(t *testing.T) {
 	bc, execs := createChannel(0, 10)
 
-	cif, _ := ciFuncs(2, 1, stat.Mean, 0.05, bench.AllInvocations)
+	sigLevels := []float64{0.05, 0.01}
+
+	cif, _ := ciFuncs(2, 1, stat.Mean, sigLevels, bench.AllInvocations)
 	rc := bootstrap.CIs(bc, cif)
 
 	for i, e := range execs {
@@ -147,14 +149,19 @@ func TestCIsValues(t *testing.T) {
 		if !ev.Benchmark.Equals(e.Benchmark) {
 			t.Fatalf("Expected benchmark %v, got %v", e, ev)
 		}
-		if ev.CI.Level != 0.95 {
-			t.Fatalf("Unexpected CI level %.2f", ev.CI.Level)
-		}
-		if ev.CI.Lower != 4 {
-			t.Fatalf("Unexpected CI lower %.2f", ev.CI.Lower)
-		}
-		if ev.CI.Upper != 4 {
-			t.Fatalf("Unexpected CI upper %.2f", ev.CI.Upper)
+
+		for i, sigLevel := range sigLevels {
+			ciLevel := 1 - sigLevel
+			ci := ev.CIs[i]
+			if ci.Level != ciLevel {
+				t.Fatalf("Unexpected CI level: expected %.2f but was %.2f", ciLevel, ci.Level)
+			}
+			if ci.Lower != 4 {
+				t.Fatalf("Unexpected CI lower %.2f", ci.Lower)
+			}
+			if ci.Upper != 4 {
+				t.Fatalf("Unexpected CI upper %.2f", ci.Upper)
+			}
 		}
 	}
 

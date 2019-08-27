@@ -9,7 +9,7 @@ import (
 
 type CIResult struct {
 	Benchmark *bench.B
-	CI        stat.CI
+	CIs       []stat.CI
 	Err       error
 }
 
@@ -26,7 +26,7 @@ func CIs(c bench.Chan, ciFunc CIFunc) <-chan CIResult {
 			case bench.ExecNext:
 				out <- CIResult{
 					Benchmark: br.Exec.Benchmark,
-					CI:        ciFunc(br.Exec),
+					CIs:       ciFunc(br.Exec),
 				}
 			}
 		}
@@ -36,7 +36,7 @@ func CIs(c bench.Chan, ciFunc CIFunc) <-chan CIResult {
 
 type CIRatioResult struct {
 	Benchmark *bench.B
-	CIRatio   stat.CIRatio
+	CIRatios  []stat.CIRatio
 	Err       error
 }
 
@@ -123,21 +123,25 @@ func handleSingleResult(out chan<- CIRatioResult, ev *bench.ExecutionValue, cnr 
 		return
 	}
 
-	ci := ciFunc(ev.Exec)
+	cis := ciFunc(ev.Exec)
+	ciRatios := make([]stat.CIRatio, len(cis))
 
-	cir := stat.CIRatio{}
-	if cnr == cNr1 {
-		cir.CIA = ci
-	} else if cnr == cNr2 {
-		cir.CIB = ci
-	} else {
-		// invalid channel number cnr
-		panic(fmt.Sprintf("Invalid channel number %d", cnr))
+	for i, ci := range cis {
+		cir := stat.CIRatio{}
+		if cnr == cNr1 {
+			cir.CIA = ci
+		} else if cnr == cNr2 {
+			cir.CIB = ci
+		} else {
+			// invalid channel number cnr
+			panic(fmt.Sprintf("Invalid channel number %d", cnr))
+		}
+		ciRatios[i] = cir
 	}
 
 	out <- CIRatioResult{
 		Benchmark: ev.Exec.Benchmark,
-		CIRatio:   cir,
+		CIRatios:  ciRatios,
 	}
 }
 
@@ -183,7 +187,7 @@ func handleTwoValidResults(out chan<- CIRatioResult, ev1, ev2 *bench.ExecutionVa
 	case 0:
 		out <- CIRatioResult{
 			Benchmark: ex1.Benchmark,
-			CIRatio:   ciRatioFunc(ex1, ex2),
+			CIRatios:  ciRatioFunc(ex1, ex2),
 		}
 	case -1:
 		handleSingleResult(out, ev1, cNr1, ciFunc)

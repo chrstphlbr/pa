@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,10 +39,10 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, outputMetric bool, printMem bool) {
+func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, outputMetric bool, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
-	sl := flag.Float64("sig", 0.05, "Significance level")
+	sls := flag.String("sig", "0.05", "Significance levels (multiple seperated by ',')")
 	is := flag.Int("is", 0, "Number of invocation samples taken (0 for mean across all invocations, -1 for all, > 0 for number of samples)")
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
 	om := flag.Bool("om", false, "Include statistic/metric (e.g., mean of benchmark) in output")
@@ -82,6 +83,19 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		}
 	}
 
+	// significance levels
+	slsSplitted := strings.Split(*sls, ",")
+	slsFloat := make([]float64, 0, len(slsSplitted))
+	for _, sl := range slsSplitted {
+		slFloat, err := strconv.ParseFloat(sl, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "Could not parse significance level '%s' into float64: %v\n\n", sl, err)
+			flag.Usage()
+			os.Exit(1)
+		}
+		slsFloat = append(slsFloat, slFloat)
+	}
+
 	if *is < -1 {
 		fmt.Fprint(os.Stdout, "Invalid number of invocation samples, must be 0 for mean across samples from iteration, > 0 for number of samples, or -1 for all\n\n")
 		flag.Usage()
@@ -112,11 +126,11 @@ func parseArgs() (c cmd, sim int, sigLev float64, statFunc statisticFunc, f1, f2
 		os.Exit(1)
 	}
 
-	return c, *s, *sl, sf, f1, f2, *is, *om, *rm
+	return c, *s, slsFloat, sf, f1, f2, *is, *om, *rm
 }
 
 func main() {
-	cmd, sim, sigLev, sf, f1, f2, is, outputMetric, printMem := parseArgs()
+	cmd, sim, sigLevels, sf, f1, f2, is, outputMetric, printMem := parseArgs()
 	maxNrWorkers := runtime.NumCPU()
 
 	var sampler bench.InvocationSampler
@@ -137,7 +151,7 @@ func main() {
 	outHeader.WriteString(fmt.Sprintf("# cmd = %s\n", cmd))
 	outHeader.WriteString(fmt.Sprintf("# number of cores = %d\n", maxNrWorkers))
 	outHeader.WriteString(fmt.Sprintf("# bootstrap simulations = %d\n", sim))
-	outHeader.WriteString(fmt.Sprintf("# significance level = %.2f\n", sigLev))
+	outHeader.WriteString(fmt.Sprintf("# significance levels = %v\n", sigLevels))
 	outHeader.WriteString(fmt.Sprintf("# statistic = %s\n", sf.Name))
 	outHeader.WriteString(fmt.Sprintf("# include statistic in output = %t\n", outputMetric))
 	outHeader.WriteString(fmt.Sprintf("# invocation sampling = %s\n", samplingType))
@@ -146,8 +160,8 @@ func main() {
 	fmt.Fprint(os.Stdout, outHeader.String())
 	fmt.Fprintln(os.Stdout, "")
 
-	ciFunc := bootstrap.CIFuncSetup(sim, maxNrWorkers, sf.Func, sigLev, sampler)
-	ciRatioFunc := bootstrap.CIRatioFuncSetup(sim, maxNrWorkers, sf.Func, sigLev, sampler)
+	ciFunc := bootstrap.CIFuncSetup(sim, maxNrWorkers, sf.Func, sigLevels, sampler)
+	ciRatioFunc := bootstrap.CIRatioFuncSetup(sim, maxNrWorkers, sf.Func, sigLevels, sampler)
 
 	var exec func()
 	switch cmd {
@@ -182,7 +196,7 @@ func ci(ciFunc bootstrap.CIFunc, fp string, outputMetric, printMem bool) {
 
 	c, err := bench.FromCSV(ctx, f)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v", err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return
 	}
 
@@ -197,13 +211,15 @@ func ci(ciFunc bootstrap.CIFunc, fp string, outputMetric, printMem bool) {
 		}
 
 		b := res.Benchmark
-		ci := res.CI
-		if outputMetric {
-			// include statistic/metric in output
-			fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Metric, ci.Lower, ci.Upper, ci.Level)
-		} else {
-			// only print CIs
-			fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
+		cis := res.CIs
+		for _, ci := range cis {
+			if outputMetric {
+				// include statistic/metric in output
+				fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Metric, ci.Lower, ci.Upper, ci.Level)
+			} else {
+				// only print CIs
+				fmt.Fprintf(os.Stdout, "%s;%s;%s;%e;%e;%.2f\n", b.Name, b.FunctionParams, b.PerfParams, ci.Lower, ci.Upper, ci.Level)
+			}
 		}
 		printMemStats(printMem)
 	}
@@ -236,27 +252,29 @@ func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []
 		}
 
 		b := res.Benchmark
-		cir := res.CIRatio
-		if outputMetric {
-			// include statistic/metric in output
-			fmt.Fprintf(
-				os.Stdout,
-				"%s;%s;%s;%e;%e;%e;%.2f;%e;%e;%e;%.2f;%e;%e;%e;%.2f\n",
-				b.Name, b.FunctionParams, b.PerfParams,
-				cir.CIA.Metric, cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
-				cir.CIB.Metric, cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
-				cir.CIRatio.Metric, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
-			)
-		} else {
-			// only print CIs
-			fmt.Fprintf(
-				os.Stdout,
-				"%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n",
-				b.Name, b.FunctionParams, b.PerfParams,
-				cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
-				cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
-				cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
-			)
+		cirs := res.CIRatios
+		for _, cir := range cirs {
+			if outputMetric {
+				// include statistic/metric in output
+				fmt.Fprintf(
+					os.Stdout,
+					"%s;%s;%s;%e;%e;%e;%.2f;%e;%e;%e;%.2f;%e;%e;%e;%.2f\n",
+					b.Name, b.FunctionParams, b.PerfParams,
+					cir.CIA.Metric, cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
+					cir.CIB.Metric, cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
+					cir.CIRatio.Metric, cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
+				)
+			} else {
+				// only print CIs
+				fmt.Fprintf(
+					os.Stdout,
+					"%s;%s;%s;%e;%e;%.2f;%e;%e;%.2f;%e;%e;%.2f\n",
+					b.Name, b.FunctionParams, b.PerfParams,
+					cir.CIA.Lower, cir.CIA.Upper, cir.CIA.Level,
+					cir.CIB.Lower, cir.CIB.Upper, cir.CIB.Level,
+					cir.CIRatio.Lower, cir.CIRatio.Upper, cir.CIRatio.Level,
+				)
+			}
 		}
 		printMemStats(printMem)
 	}

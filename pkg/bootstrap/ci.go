@@ -16,27 +16,27 @@ import (
 	"gonum.org/v1/gonum/stat/sampleuv"
 )
 
-type CIFunc = func(bench.ExecutionSlice) st.CI
-type CIRatioFunc = func(bench.ExecutionSlice, bench.ExecutionSlice) st.CIRatio
+type CIFunc = func(bench.ExecutionSlice) []st.CI
+type CIRatioFunc = func(bench.ExecutionSlice, bench.ExecutionSlice) []st.CIRatio
 
-func CIRatioFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, significanceLevel float64, sampler bench.InvocationSampler) CIRatioFunc {
-	return func(executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice) st.CIRatio {
-		return CIRatio(iters, maxNrWorkers, statFunc, significanceLevel, executionsA, executionsB, sampler)
+func CIRatioFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, significanceLevels []float64, sampler bench.InvocationSampler) CIRatioFunc {
+	return func(executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice) []st.CIRatio {
+		return CIRatio(iters, maxNrWorkers, statFunc, significanceLevels, executionsA, executionsB, sampler)
 	}
 }
 
-func CIFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, significanceLevel float64, sampler bench.InvocationSampler) CIFunc {
-	return func(executions bench.ExecutionSlice) st.CI {
-		return CI(iters, maxNrWorkers, statFunc, significanceLevel, executions, sampler)
+func CIFuncSetup(iters int, maxNrWorkers int, statFunc st.StatisticFunc, significanceLevels []float64, sampler bench.InvocationSampler) CIFunc {
+	return func(executions bench.ExecutionSlice) []st.CI {
+		return CI(iters, maxNrWorkers, statFunc, significanceLevels, executions, sampler)
 	}
 }
 
-func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, sampler bench.InvocationSampler) st.CIRatio {
-	metricA, simStatA := metricAndSimulations(iters, maxNrWorkers, statisticFunc, significanceLevel, executionsA, sampler)
-	ciA := ci(metricA, simStatA, significanceLevel)
+func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevels []float64, executionsA bench.ExecutionSlice, executionsB bench.ExecutionSlice, sampler bench.InvocationSampler) []st.CIRatio {
+	metricA, simStatA := metricAndSimulations(iters, maxNrWorkers, statisticFunc, executionsA, sampler)
+	ciAs := ci(metricA, simStatA, significanceLevels)
 
-	metricB, simStatB := metricAndSimulations(iters, maxNrWorkers, statisticFunc, significanceLevel, executionsB, sampler)
-	ciB := ci(metricB, simStatB, significanceLevel)
+	metricB, simStatB := metricAndSimulations(iters, maxNrWorkers, statisticFunc, executionsB, sampler)
+	ciBs := ci(metricB, simStatB, significanceLevels)
 
 	lSimA := len(simStatA)
 	lSimB := len(simStatB)
@@ -50,20 +50,26 @@ func CIRatio(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, signif
 		ratios = append(ratios, ratio)
 	}
 	ratioMetric := statisticFunc(ratios)
+	ciRatios := ci(ratioMetric, ratios, significanceLevels)
 
-	return st.CIRatio{
-		CIA:     ciA,
-		CIB:     ciB,
-		CIRatio: ci(ratioMetric, ratios, significanceLevel),
+	lsl := len(significanceLevels)
+	ret := make([]st.CIRatio, lsl)
+	for i := 0; i < lsl; i++ {
+		ret[i] = st.CIRatio{
+			CIA:     ciAs[i],
+			CIB:     ciBs[i],
+			CIRatio: ciRatios[i],
+		}
 	}
+	return ret
 }
 
-func CI(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executions bench.ExecutionSlice, sampler bench.InvocationSampler) st.CI {
-	metric, simStat := metricAndSimulations(iters, maxNrWorkers, statisticFunc, significanceLevel, executions, sampler)
-	return ci(metric, simStat, significanceLevel)
+func CI(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevels []float64, executions bench.ExecutionSlice, sampler bench.InvocationSampler) []st.CI {
+	metric, simStat := metricAndSimulations(iters, maxNrWorkers, statisticFunc, executions, sampler)
+	return ci(metric, simStat, significanceLevels)
 }
 
-func metricAndSimulations(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, significanceLevel float64, executions bench.ExecutionSlice, sampler bench.InvocationSampler) (metric float64, simStat []float64) {
+func metricAndSimulations(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, sampler bench.InvocationSampler) (metric float64, simStat []float64) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
@@ -87,27 +93,32 @@ func benchMetric(executions bench.ExecutionSlice, statisticFunc st.StatisticFunc
 	return metric
 }
 
-func ci(metric float64, d []float64, significanceLevel float64) st.CI {
-	sl := st.SigLevel(significanceLevel)
-
-	slhalf := sl / 2
-	clhalf := 1 - sl
-
+func ci(metric float64, d []float64, significanceLevels []float64) []st.CI {
 	sort.Float64s(d)
 	lstat := float64(len(d))
 
-	lqi := int(math.Ceil(lstat * slhalf))
-	uqi := int(math.Floor(lstat * clhalf))
+	ret := make([]st.CI, len(significanceLevels))
+	for i, significanceLevel := range significanceLevels {
 
-	lq := d[lqi]
-	uq := d[uqi]
+		sl := st.SigLevel(significanceLevel)
 
-	return st.CI{
-		Metric: metric,
-		Lower:  lq,
-		Upper:  uq,
-		Level:  1 - sl,
+		slhalf := sl / 2
+		clhalf := 1 - sl
+
+		lqi := int(math.Ceil(lstat * slhalf))
+		uqi := int(math.Floor(lstat * clhalf))
+
+		lq := d[lqi]
+		uq := d[uqi]
+
+		ret[i] = st.CI{
+			Metric: metric,
+			Lower:  lq,
+			Upper:  uq,
+			Level:  1 - sl,
+		}
 	}
+	return ret
 }
 
 func simulatedStatistics(iters int, maxNrWorkers int, statisticFunc st.StatisticFunc, executions bench.ExecutionSlice, sampler bench.InvocationSampler) []float64 {
