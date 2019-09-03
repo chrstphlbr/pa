@@ -7,8 +7,6 @@ import (
 	"golang.org/x/exp/rand"
 
 	"gonum.org/v1/gonum/stat/sampleuv"
-
-	"gonum.org/v1/gonum/stat"
 )
 
 type InvocationSampler func([]Invocations) []float64
@@ -28,8 +26,15 @@ func AllInvocations(ivs []Invocations) []float64 {
 }
 
 func MeanInvocations(ivs []Invocations) []float64 {
-	all := AllInvocations(ivs)
-	mean := stat.Mean(all, nil)
+	var total int
+	var sum float64
+
+	for _, iv := range ivs {
+		total += iv.Count
+		sum += float64(iv.Count) * iv.Value
+	}
+
+	mean := sum / float64(total)
 	return []float64{mean}
 }
 
