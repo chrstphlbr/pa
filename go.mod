@@ -6,3 +6,5 @@ require (
 	gonum.org/v1/gonum v0.0.0-20181106105144-6439751d3175
 	gonum.org/v1/netlib v0.0.0-20181029234149-ec6d1f5cefe6 // indirect
 )
+
+go 1.13
