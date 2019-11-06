@@ -103,7 +103,7 @@ func ci(metric float64, d []float64, significanceLevels []float64) []st.CI {
 		sl := st.SigLevel(significanceLevel)
 
 		slhalf := sl / 2
-		clhalf := 1 - sl
+		clhalf := 1 - slhalf
 
 		lqi := int(math.Ceil(lstat * slhalf))
 		uqi := int(math.Floor(lstat * clhalf))
