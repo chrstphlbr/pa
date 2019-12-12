@@ -92,6 +92,9 @@ Every iteration can have multiple values (i.e., invocations), which are presente
 Each histogram value corresponds to one CSV row, and the occurrences of this value is defined by `value_count`.
 12. `value` is the performance metric with a certain `unit`
 
+**IMPORTANT**: the input files must be sorted by `benchmark` and `params`, otherwise the tool will not work correctly.
+This is because input files can be *large* and, therefore, *pa* works on file input streams.
+
 
 ### Output File
 
