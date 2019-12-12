@@ -75,7 +75,7 @@ The columns represent the following values:
 1. `project` is the project name
 2. `commit` is the project version, e.g., a commit hash
 3. `benchmark` is the name of the fully-qualified benchmark method
-4. `params` are the performance parameters (not the Java parameters) of the benchmark in comma-separated form.
+4. `params` are the performance parameters (not the function/method parameters) of the benchmark in comma-separated form.
 Every parameter consists of a name and a value, separated by an equal sign (`name=value`).
 For example JMH supports performance parameters through its `@Param` annotation
 5. `instance` is the name of the instance or machine (level 5)
