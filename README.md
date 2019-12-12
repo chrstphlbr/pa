@@ -1,6 +1,6 @@
 # *pa* - Performance (Change) Analysis
 
-*pa* is an efficient tool for analysing performance data based on statistical simulation, i.e., bootstrapping.
+*pa* is an efficient tool for analysing performance data based on statistical simulation, i.e., bootstrap.
 The performance data can come from measurements such as performance tests or benchmarks.
 
 There are two main ways how to analyse performance data with *pa*:
