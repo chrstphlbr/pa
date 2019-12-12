@@ -87,7 +87,7 @@ For example JMH supports forks through their `@Fork` annotation
 For exmaple JMH supports average time `avgt`, throughput `thrpt`, or sample time `sample`
 10. `unit` is the measurement unit of the benchmark value.
 Depending on the `mode`, the measurement unit can be ns/op for average time or op/s for throughput 
-11. `value_count` is the number of invocations (level ) the `value` occurred in this iteration.
+11. `value_count` is the number of invocations (level 1) the `value` occurred in this iteration.
 Every iteration can have multiple values (i.e., invocations), which are presented as a histogram.
 Each histogram value corresponds to one CSV row, and the occurrences of this value is defined by `value_count`.
 12. `value` is the performance metric with a certain `unit`
