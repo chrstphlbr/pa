@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bench"
 )
 
 func TestBNewEmpty(t *testing.T) {

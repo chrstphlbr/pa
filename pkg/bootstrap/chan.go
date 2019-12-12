@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"fmt"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
-	"bitbucket.org/sealuzh/pa/pkg/stat"
+	"github.com/chrstphlbr/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/stat"
 )
 
 type CIResult struct {

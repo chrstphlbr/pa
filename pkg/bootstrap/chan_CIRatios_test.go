@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/stat"
-
-	"bitbucket.org/sealuzh/pa/pkg/bench"
-	"bitbucket.org/sealuzh/pa/pkg/bootstrap"
+	"github.com/chrstphlbr/pa/pkg/stat"
+	"github.com/chrstphlbr/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bootstrap"
 )
 
 var ciLevels = []float64{0.05, 0.01}

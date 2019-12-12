@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
-	st "bitbucket.org/sealuzh/pa/pkg/stat"
+	"github.com/chrstphlbr/pa/pkg/bench"
+	st "github.com/chrstphlbr/pa/pkg/stat"
 
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat"

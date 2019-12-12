@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bench"
 )
 
 func benchChan(nr, elems int) bench.Chan {

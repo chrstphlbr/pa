@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bench"
 )
 
 // creating

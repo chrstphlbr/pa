@@ -1,4 +1,4 @@
-module bitbucket.org/sealuzh/pa
+module github.com/chrstphlbr/pa
 
 require (
 	golang.org/x/exp v0.0.0-20181106170214-d68db9428509

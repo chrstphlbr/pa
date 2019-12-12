@@ -3,7 +3,7 @@ package stat_test
 import (
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/stat"
+	"github.com/chrstphlbr/pa/pkg/stat"
 )
 
 func TestMedianEmpty(t *testing.T) {

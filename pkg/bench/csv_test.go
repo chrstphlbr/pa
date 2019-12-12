@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bench"
 )
 
 const csvErr = "record on line 1: wrong number of fields"

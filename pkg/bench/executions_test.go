@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bench"
 )
 
 func createBench(name string) *bench.B {

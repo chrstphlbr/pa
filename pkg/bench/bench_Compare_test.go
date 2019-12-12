@@ -3,7 +3,7 @@ package bench_test
 import (
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bench"
 )
 
 func TestBCompareEqualName(t *testing.T) {

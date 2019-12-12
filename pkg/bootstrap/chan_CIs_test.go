@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"bitbucket.org/sealuzh/pa/pkg/bench"
-	"bitbucket.org/sealuzh/pa/pkg/bootstrap"
-	"bitbucket.org/sealuzh/pa/pkg/stat"
+	"github.com/chrstphlbr/pa/pkg/bench"
+	"github.com/chrstphlbr/pa/pkg/bootstrap"
+	"github.com/chrstphlbr/pa/pkg/stat"
 )
 
 func TestCIsEmpty(t *testing.T) {
