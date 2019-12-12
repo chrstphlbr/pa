@@ -96,14 +96,15 @@ Each histogram value corresponds to one CSV row, and the occurrences of this val
 This is because input files can be *large* and, therefore, *pa* works on file input streams.
 
 
-### Output File
+### Output
 
-Output files can contain 3 types of rows:
+*pa* writes the results in CSV form to stdout.
+The output can contain 3 types of CSV rows:
 * rows starting with `#` are comments
 * empty rows
 * all other rows are CSV rows
 
-The 
+The columns are:
 1. `benchmark` is the name of the benchmark
 2. `params` are the function/method parameters of the benchmark.
 *pa* does not populate this column, because the input format does not provide the function/method parameters
