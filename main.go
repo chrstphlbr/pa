@@ -41,11 +41,11 @@ type statisticFunc struct {
 
 func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, outputMetric bool, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
-	s := flag.Int("bs", 1000, "Number of bootstrap simulations")
-	sls := flag.String("sig", "0.05", "Significance levels (multiple seperated by ',')")
-	is := flag.Int("is", 0, "Number of invocation samples taken (0 for mean across all invocations, -1 for all, > 0 for number of samples)")
+	s := flag.Int("bs", 10000, "Number of bootstrap simulations")
+	sls := flag.String("sl", "0.01", "Significance levels (multiple seperated by ',')")
+	is := flag.Int("is", 0, "Number of invocation samples (0 for mean across all invocations, -1 for all, > 0 for number of samples)")
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
-	om := flag.Bool("om", false, "Include statistic/metric (e.g., mean of benchmark) in output")
+	om := flag.Bool("os", false, "Include statistic (e.g., mean) in output")
 	rm := flag.Bool("mem", false, "Print runtime memory to Stdout")
 	flag.Parse()
 
