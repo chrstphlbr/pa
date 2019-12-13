@@ -146,8 +146,8 @@ Compared to the single version analysis, the two version analysis has three or f
 
 ## References
 
-[1] T. Kalibera and R. Jones, “Quantifying performance changes with effect size confidence intervals,” University of Kent, Technical Report 4–12, June 2012. Available: [URL](http://www.cs.kent.ac.uk/pubs/2012/3233)
+[1] T. Kalibera and R. Jones, “Quantifying performance changes with effect size confidence intervals”, University of Kent, Technical Report 4–12, June 2012. Available: [URL](http://www.cs.kent.ac.uk/pubs/2012/3233)
 
-[1] A. C. Davison and D. V. Hinkley, “Bootstrap methods and their application”
+[2] A. C. Davison and D. V. Hinkley, “Bootstrap methods and their application”
 
-[2] S. Ren, H. Lai, W. Tong, M. Aminzadeh, X. Hou, and S. Lai, “Nonparametric bootstrapping for hierarchical data”, Journal of Applied Statistics, vol. 37, no. 9, pp. 1487–1498, 2010. Available: [DOI](https://doi.org/10.1080/02664760903046102)
+[3] S. Ren, H. Lai, W. Tong, M. Aminzadeh, X. Hou, and S. Lai, “Nonparametric bootstrapping for hierarchical data”, Journal of Applied Statistics, vol. 37, no. 9, pp. 1487–1498, 2010. Available: [DOI](https://doi.org/10.1080/02664760903046102)
