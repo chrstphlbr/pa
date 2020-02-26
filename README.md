@@ -75,7 +75,7 @@ The columns represent the following values:
 1. `project` is the project name
 2. `commit` is the project version, e.g., a commit hash
 3. `benchmark` is the name of the fully-qualified benchmark method
-4. `params` are the performance parameters (not the Java parameters) of the benchmark in comma-separated form.
+4. `params` are the performance parameters (not the function/method parameters) of the benchmark in comma-separated form.
 Every parameter consists of a name and a value, separated by an equal sign (`name=value`).
 For example JMH supports performance parameters through its `@Param` annotation
 5. `instance` is the name of the instance or machine (level 5)
@@ -87,7 +87,7 @@ For example JMH supports forks through their `@Fork` annotation
 For exmaple JMH supports average time `avgt`, throughput `thrpt`, or sample time `sample`
 10. `unit` is the measurement unit of the benchmark value.
 Depending on the `mode`, the measurement unit can be ns/op for average time or op/s for throughput 
-11. `value_count` is the number of invocations (level ) the `value` occurred in this iteration.
+11. `value_count` is the number of invocations (level 1) the `value` occurred in this iteration.
 Every iteration can have multiple values (i.e., invocations), which are presented as a histogram.
 Each histogram value corresponds to one CSV row, and the occurrences of this value is defined by `value_count`.
 12. `value` is the performance metric with a certain `unit`
@@ -96,14 +96,15 @@ Each histogram value corresponds to one CSV row, and the occurrences of this val
 This is because input files can be *large* and, therefore, *pa* works on file input streams.
 
 
-### Output File
+### Output
 
-Output files can contain 3 types of rows:
+*pa* writes the results in CSV form to stdout.
+The output can contain 3 types of CSV rows:
 * rows starting with `#` are comments
 * empty rows
 * all other rows are CSV rows
 
-The 
+The columns are:
 1. `benchmark` is the name of the benchmark
 2. `params` are the function/method parameters of the benchmark.
 *pa* does not populate this column, because the input format does not provide the function/method parameters
@@ -145,8 +146,8 @@ Compared to the single version analysis, the two version analysis has three or f
 
 ## References
 
-[1] T. Kalibera and R. Jones, “Quantifying performance changes with effect size confidence intervals,” University of Kent, Technical Report 4–12, June 2012. Available: [URL](http://www.cs.kent.ac.uk/pubs/2012/3233)
+[1] T. Kalibera and R. Jones, “Quantifying performance changes with effect size confidence intervals”, University of Kent, Technical Report 4–12, June 2012. Available: [URL](http://www.cs.kent.ac.uk/pubs/2012/3233)
 
-[1] A. C. Davison and D. V. Hinkley, “Bootstrap methods and their application”
+[2] A. C. Davison and D. V. Hinkley, “Bootstrap methods and their application”
 
-[2] S. Ren, H. Lai, W. Tong, M. Aminzadeh, X. Hou, and S. Lai, “Nonparametric bootstrapping for hierarchical data”, Journal of Applied Statistics, vol. 37, no. 9, pp. 1487–1498, 2010. Available: [DOI](https://doi.org/10.1080/02664760903046102)
+[3] S. Ren, H. Lai, W. Tong, M. Aminzadeh, X. Hou, and S. Lai, “Nonparametric bootstrapping for hierarchical data”, Journal of Applied Statistics, vol. 37, no. 9, pp. 1487–1498, 2010. Available: [DOI](https://doi.org/10.1080/02664760903046102)
