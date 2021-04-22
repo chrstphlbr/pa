@@ -46,15 +46,6 @@ func TestNewExecutionEmpty(t *testing.T) {
 
 // AddInvocations
 
-func addInvocationsHelper(t *testing.T, e *bench.Execution, ivs []bench.InvocationsFlat) {
-	for i, is := range ivs {
-		err := e.AddInvocations(is)
-		if err != nil {
-			t.Fatalf("Could not add (pos=%d): %v", i, err)
-		}
-	}
-}
-
 func TestAddInvocationsInvalidBench(t *testing.T) {
 	e := bench.NewExecution(b)
 
@@ -162,4 +153,69 @@ func TestAddInvocationsAppendInvocationsIteration(t *testing.T) {
 
 func TestAddInvocationsAppendInvocationsInvocation(t *testing.T) {
 	addInvocation(t, "i1", "i1", 1, 1, 1, 1, 1, 1)
+}
+
+// Copy
+
+func TestCopyDifferentPointer(t *testing.T) {
+	e := bench.NewExecution(b)
+	ec := e.Copy()
+
+	if e == ec {
+		t.Fatalf("copy is identical with original")
+	}
+}
+
+func TestCopyBenchmark(t *testing.T) {
+	e := bench.NewExecution(b)
+	ec := e.Copy()
+
+	if e.Benchmark == ec.Benchmark {
+		t.Fatalf("copy's benchmark is identical with original's benchmark")
+	}
+
+	if !e.Benchmark.Equals(ec.Benchmark) {
+		t.Fatalf("copy's benchmark not equal to original's benchmark")
+	}
+}
+
+func TestCopyEmpty(t *testing.T) {
+	e := bench.NewExecution(b)
+	ec := e.Copy()
+
+	liids := len(ec.InstanceIDs)
+	if liids != 0 {
+		t.Fatalf("copy's InstanceIDs length not 0, was %d", liids)
+	}
+
+	lis := len(ec.Instances)
+	if lis != liids {
+		t.Fatalf("copy's Instances length not 0, was %d", lis)
+	}
+
+	equalInstances(t, e, ec)
+}
+
+func TestCopyComplex(t *testing.T) {
+	e := bench.NewExecution(b)
+
+	instances := []string{"instance1", "instance2", "instance3"}
+	trials := []int{1, 2, 3, 4}
+	forks := []int{1, 2, 3, 4, 5}
+	iterations := []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+	nrInvocations := 20
+	for _, instance := range instances {
+		for _, trial := range trials {
+			for _, fork := range forks {
+				for _, iteration := range iterations {
+					is := createInvocationsFlat(nrInvocations, b, instance, trial, fork, iteration)
+					addInvocationsHelper(t, e, is)
+				}
+			}
+		}
+	}
+
+	ec := e.Copy()
+
+	equalInstances(t, e, ec)
 }

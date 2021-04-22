@@ -38,6 +38,18 @@ func (b *B) String() string {
 	return sb.String()
 }
 
+func (b *B) Copy() *B {
+	nb := New(b.Name)
+
+	nfps := make([]string, len(b.FunctionParams))
+	copy(nfps, b.FunctionParams)
+	nb.FunctionParams = nfps
+
+	nb.PerfParams = b.PerfParams.Copy()
+
+	return nb
+}
+
 func (b *B) Equals(other *B) bool {
 	return b.Compare(other) == 0
 }
@@ -197,4 +209,22 @@ func (pp *PerfParams) String() string {
 	}
 
 	return sb.String()
+}
+
+func (pp *PerfParams) Copy() *PerfParams {
+	pp.l.RLock()
+	defer pp.l.RUnlock()
+
+	newKeys := make([]string, len(pp.keys))
+	copy(newKeys, pp.keys)
+
+	newParams := make(map[string]string)
+	for k, v := range pp.params {
+		newParams[k] = v
+	}
+
+	return &PerfParams{
+		keys:   newKeys,
+		params: newParams,
+	}
 }

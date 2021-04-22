@@ -328,6 +328,67 @@ func (e *Execution) AddInvocations(is InvocationsFlat) error {
 	return nil
 }
 
+func (e *Execution) Copy() *Execution {
+	ne := NewExecution(e.Benchmark.Copy())
+	ne.len = e.len
+
+	iids := make([]string, len(e.InstanceIDs))
+	copy(iids, e.InstanceIDs)
+	ne.InstanceIDs = iids
+	ne.Instances = make(map[string]*Instance)
+
+	for iid, instance := range e.Instances {
+		tids := make([]int, len(instance.TrialIDs))
+		copy(tids, instance.TrialIDs)
+
+		newTrials := make(map[int]*Trial)
+
+		for tid, trial := range instance.Trials {
+			fids := make([]int, len(trial.ForkIDs))
+			copy(fids, trial.ForkIDs)
+
+			newForks := make(map[int]*Fork)
+
+			for fid, fork := range trial.Forks {
+				itids := make([]int, len(fork.IterationIDs))
+				copy(itids, fork.IterationIDs)
+
+				newIterations := make(map[int]*Iteration)
+
+				for itid, iteration := range fork.Iterations {
+					newInvocations := make([]Invocations, len(iteration.Invocations))
+					copy(newInvocations, iteration.Invocations)
+
+					newIterations[itid] = &Iteration{
+						ID:          itid,
+						Invocations: newInvocations,
+					}
+				}
+
+				newForks[fid] = &Fork{
+					ID:           fid,
+					IterationIDs: itids,
+					Iterations:   newIterations,
+				}
+			}
+
+			newTrials[tid] = &Trial{
+				ID:      tid,
+				ForkIDs: fids,
+				Forks:   newForks,
+			}
+		}
+
+		ne.Instances[iid] = &Instance{
+			ID:       iid,
+			TrialIDs: tids,
+			Trials:   newTrials,
+		}
+	}
+
+	return ne
+}
+
 func (e *Execution) Merge(other *Execution) error {
 	if !e.Benchmark.Equals(other.Benchmark) {
 		return fmt.Errorf("Benchmarks not the same: this %+v, other %+v", e.Benchmark, other.Benchmark)
