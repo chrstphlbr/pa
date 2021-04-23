@@ -193,10 +193,10 @@ func TestCopyEmpty(t *testing.T) {
 		t.Fatalf("copy's Instances length not 0, was %d", lis)
 	}
 
-	equalInstances(t, e, ec)
+	equalInstances(t, e, ec, true)
 }
 
-func TestCopyComplex(t *testing.T) {
+func complexExecution(t *testing.T) *bench.Execution {
 	e := bench.NewExecution(b)
 
 	instances := []string{"instance1", "instance2", "instance3"}
@@ -215,7 +215,12 @@ func TestCopyComplex(t *testing.T) {
 		}
 	}
 
+	return e
+}
+
+func TestCopyComplex(t *testing.T) {
+	e := complexExecution(t)
 	ec := e.Copy()
 
-	equalInstances(t, e, ec)
+	equalInstances(t, e, ec, true)
 }

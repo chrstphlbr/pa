@@ -173,7 +173,7 @@ func checkIteration(t *testing.T, i *bench.Iteration, nrivs int, enrinvs int) {
 	}
 }
 
-func equalInstances(t *testing.T, i1, i2 *bench.Execution) {
+func equalInstances(t *testing.T, i1, i2 *bench.Execution, failPointerEqual bool) {
 	liids1 := len(i1.InstanceIDs)
 	liids2 := len(i2.InstanceIDs)
 	if liids1 != liids2 {
@@ -195,7 +195,7 @@ func equalInstances(t *testing.T, i1, i2 *bench.Execution) {
 		instance1 := i1.Instances[instanceID1]
 		instance2 := i2.Instances[instanceID2]
 
-		if instance1 == instance2 {
+		if failPointerEqual && instance1 == instance2 {
 			t.Fatalf("Instances are identical")
 		}
 		if instance1.ID != instance2.ID {
@@ -205,11 +205,11 @@ func equalInstances(t *testing.T, i1, i2 *bench.Execution) {
 			t.Fatalf("Instance's ID not equal to InstanceID")
 		}
 
-		equalTrials(t, instance1.TrialIDs, instance2.TrialIDs, instance1.Trials, instance2.Trials)
+		equalTrials(t, instance1.TrialIDs, instance2.TrialIDs, instance1.Trials, instance2.Trials, failPointerEqual)
 	}
 }
 
-func equalTrials(t *testing.T, trialIDs1, trialIDs2 []int, trials1, trials2 map[int]*bench.Trial) {
+func equalTrials(t *testing.T, trialIDs1, trialIDs2 []int, trials1, trials2 map[int]*bench.Trial, failPointerEqual bool) {
 	if len(trialIDs1) != len(trialIDs2) {
 		t.Fatalf("TrialIDs length not equal")
 	}
@@ -227,7 +227,7 @@ func equalTrials(t *testing.T, trialIDs1, trialIDs2 []int, trials1, trials2 map[
 		trial1 := trials1[trialID1]
 		trial2 := trials2[trialID2]
 
-		if trial1 == trial2 {
+		if failPointerEqual && trial1 == trial2 {
 			t.Fatalf("Trials are identical")
 		}
 		if trial1.ID != trial2.ID {
@@ -237,11 +237,11 @@ func equalTrials(t *testing.T, trialIDs1, trialIDs2 []int, trials1, trials2 map[
 			t.Fatalf("Trial's ID not equal to TrialID")
 		}
 
-		equalForks(t, trial1.ForkIDs, trial2.ForkIDs, trial1.Forks, trial2.Forks)
+		equalForks(t, trial1.ForkIDs, trial2.ForkIDs, trial1.Forks, trial2.Forks, failPointerEqual)
 	}
 }
 
-func equalForks(t *testing.T, forkIDs1, forkIDs2 []int, forks1, forks2 map[int]*bench.Fork) {
+func equalForks(t *testing.T, forkIDs1, forkIDs2 []int, forks1, forks2 map[int]*bench.Fork, failPointerEqual bool) {
 	if len(forkIDs1) != len(forkIDs2) {
 		t.Fatalf("ForkIDs length not equal")
 	}
@@ -259,7 +259,7 @@ func equalForks(t *testing.T, forkIDs1, forkIDs2 []int, forks1, forks2 map[int]*
 		fork1 := forks1[forkID1]
 		fork2 := forks2[forkID2]
 
-		if fork1 == fork2 {
+		if failPointerEqual && fork1 == fork2 {
 			t.Fatalf("Forks are identical")
 		}
 		if fork1.ID != fork2.ID {
@@ -269,11 +269,11 @@ func equalForks(t *testing.T, forkIDs1, forkIDs2 []int, forks1, forks2 map[int]*
 			t.Fatalf("Fork's ID not equal to ForkID")
 		}
 
-		equalIterations(t, fork1.IterationIDs, fork2.IterationIDs, fork1.Iterations, fork2.Iterations)
+		equalIterations(t, fork1.IterationIDs, fork2.IterationIDs, fork1.Iterations, fork2.Iterations, failPointerEqual)
 	}
 }
 
-func equalIterations(t *testing.T, iterationIDs1, iterationIDs2 []int, iterations1, iterations2 map[int]*bench.Iteration) {
+func equalIterations(t *testing.T, iterationIDs1, iterationIDs2 []int, iterations1, iterations2 map[int]*bench.Iteration, failPointerEqual bool) {
 	if len(iterationIDs1) != len(iterationIDs2) {
 		t.Fatalf("IterationIDs length not equal")
 	}
@@ -291,7 +291,7 @@ func equalIterations(t *testing.T, iterationIDs1, iterationIDs2 []int, iteration
 		iteration1 := iterations1[iterationID1]
 		iteration2 := iterations2[iterationID2]
 
-		if iteration1 == iteration2 {
+		if failPointerEqual && iteration1 == iteration2 {
 			t.Fatalf("Iterations are identical")
 		}
 		if iteration1.ID != iteration2.ID {
