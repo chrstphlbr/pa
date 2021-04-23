@@ -41,7 +41,7 @@ type statisticFunc struct {
 
 const defaultRoundingPrecision = 5
 
-func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, transformer1, transformer2 bench.ExecutionTransformer, outputMetric bool, printMem bool) {
+func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, transformer1, transformer2 *bench.NamedExecutionTransformer, outputMetric bool, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 10000, "Number of bootstrap simulations")
 	sls := flag.String("sl", "0.01", "Significance levels (multiple seperated by ',')")
@@ -165,6 +165,8 @@ func main() {
 	outHeader.WriteString(fmt.Sprintf("# statistic = %s\n", sf.Name))
 	outHeader.WriteString(fmt.Sprintf("# include statistic in output = %t\n", outputMetric))
 	outHeader.WriteString(fmt.Sprintf("# invocation sampling = %s\n", samplingType))
+	outHeader.WriteString(fmt.Sprintf("# transformer 1 = %s\n", transformer1.Name))
+	outHeader.WriteString(fmt.Sprintf("# transformer 2 = %s\n", transformer2.Name))
 	outHeader.WriteString(fmt.Sprintf("# files 1 = %s\n", f1))
 	outHeader.WriteString(fmt.Sprintf("# files 2 = %s\n", f2))
 	fmt.Fprint(os.Stdout, outHeader.String())
@@ -177,11 +179,11 @@ func main() {
 	switch cmd {
 	case cmdCI:
 		exec = func() {
-			ci(ciFunc, f1[0], transformer1, outputMetric, printMem)
+			ci(ciFunc, f1[0], transformer1.ExecutionTransformer, outputMetric, printMem)
 		}
 	case cmdDet:
 		exec = func() {
-			det(ciFunc, ciRatioFunc, f1, f2, transformer1, transformer2, outputMetric, printMem)
+			det(ciFunc, ciRatioFunc, f1, f2, transformer1.ExecutionTransformer, transformer2.ExecutionTransformer, outputMetric, printMem)
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "Invalid command '%s' (available: 'ci' and 'det')\n\n", cmd)
@@ -304,19 +306,19 @@ func mergedInput(ctx context.Context, fs []string) (bench.Chan, error) {
 	for _, fn := range fs {
 		f, err := os.Open(fn)
 		if err != nil {
-			return nil, fmt.Errorf("Could not open file1 '%s'", fn)
+			return nil, fmt.Errorf("could not open file1 '%s'", fn)
 		}
 
 		c1, err := bench.FromCSV(ctx, f)
 		if err != nil {
-			return nil, fmt.Errorf("Could not read from CSV for file '%s': %v", fn, err)
+			return nil, fmt.Errorf("could not read from CSV for file '%s': %v", fn, err)
 		}
 		chans = append(chans, c1)
 	}
 	return bench.MergeChans(chans...), nil
 }
 
-func parseTransformers(str string) (transformer1, transformer2 bench.ExecutionTransformer, err error) {
+func parseTransformers(str string) (transformer1, transformer2 *bench.NamedExecutionTransformer, err error) {
 	colonIdx := strings.Index(str, ":")
 	if colonIdx == -1 {
 		transformer1, err = parseTransformer(str)
@@ -334,19 +336,25 @@ func parseTransformers(str string) (transformer1, transformer2 bench.ExecutionTr
 	}
 }
 
-func parseTransformer(str string) (bench.ExecutionTransformer, error) {
-	var t bench.ExecutionTransformer
+func parseTransformer(str string) (*bench.NamedExecutionTransformer, error) {
+	var t bench.NamedExecutionTransformer
 	switch {
 	case str == "id":
-		t = nil // do not use the identity transformer
+		t = bench.NamedExecutionTransformer{
+			ExecutionTransformer: nil,
+			Name:                 "ID",
+		}
 	case strings.HasPrefix(str, "f"):
 		f, err := strconv.ParseFloat(str[1:], 64)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse factor transformer: %w", err)
 		}
-		t = bench.ConstantFactorExecutionTransformerFunc(f, defaultRoundingPrecision)
+		t = bench.NamedExecutionTransformer{
+			ExecutionTransformer: bench.ConstantFactorExecutionTransformerFunc(f, defaultRoundingPrecision),
+			Name:                 fmt.Sprintf("ConstantFactor(%g)", f),
+		}
 	}
-	return t, nil
+	return &t, nil
 }
 
 func printMemStats(print bool) {

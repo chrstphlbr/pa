@@ -7,6 +7,13 @@ type ExecutionTransformer interface {
 	transform(e *Execution) *Execution
 }
 
+var _ ExecutionTransformer = NamedExecutionTransformer{}
+
+type NamedExecutionTransformer struct {
+	ExecutionTransformer
+	Name string
+}
+
 var _ ExecutionTransformer = ExecutionTransformerFunc(func(e *Execution) *Execution { return e })
 
 type ExecutionTransformerFunc func(*Execution) *Execution
