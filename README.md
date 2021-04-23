@@ -1,9 +1,9 @@
 # *pa* - Performance (Change) Analysis
 
-*pa* is an efficient tool for analysing performance data based on statistical simulation, i.e., bootstrap.
+*pa* is an efficient tool for analyzing performance data based on statistical simulation, i.e., bootstrap.
 The performance data can come from measurements such as performance tests or benchmarks.
 
-There are two main ways how to analyse performance data with *pa*:
+There are two main ways how to analyze performance data with *pa*:
 1. Single version analysis: statistic (e.g., mean) + variability (confidence interval of the statistic)
 2. Analysis between two versions: confidence interval ratio of a statistic (e.g., mean)
 
@@ -17,11 +17,11 @@ These hierarchical levels are:
 4. trial
 5. instance
 
-Higher levels are composed of multiple occurences of lower levels, i.e., an iteration (level 2) consists of many invocations (level 1), and so on.
+Higher levels are composed of multiple occurrences of lower levels, i.e., an iteration (level 2) consists of many invocations (level 1), and so on.
 
 ## Requirements and Installations
 
-*pa* requires only Go with version 1.13 or higher ([Install Page](https://golang.org/doc/install)).
+*pa* requires only Go with version 1.14 or higher ([Install Page](https://golang.org/doc/install)).
 
 Install *pa* by running `go get github.com/chrstphlbr/pa`.
 
@@ -35,7 +35,7 @@ Install *pa* by running `go get github.com/chrstphlbr/pa`.
 *pa* comes with a simple command line interface (optional flags in `[...]` with their defaults):
 
 ```bash
-pa  [-bs 10000] [-is 0] [-sl 0.01] [-st mean] [-os] [-m 1] \
+pa  [-bs 10000] [-is 0] [-sl 0.01] [-st mean] [-os] [-m 1] [-tra id:id] \
     file_1 \
     [file_2 ... file_n] 
 ```
@@ -56,11 +56,15 @@ Flags:
 The confidence level for the confidence intervals is then `1-sl`.
 The default is 0.01 which corresponds to a 99% confidence level.
 * `-st` defines the statistic for which a confidence interval is computed.
-The deafult is `mean`.
-Another option is `median`. 
+The default is `mean`.
+Another option is `median`.
 * `-os` defines whether the statistic, as set by `-st`, is included in the output file.
-* `-m` sets the number of files per version (test and control group).
+* `-m` sets the number of files per version (control and test group).
 For example, if `-m 3` *pa* expects 6 files, where `file_1`, `file_2`, and `file_3` belong to version 1, and `file_4`, `file_5`, and `file_6` belong to version two.
+* `-tra` defines the transformation(s) applied to the benchmark results (i.e., the file(s)),
+in the form of `transformer1:transformer2`,
+where `transformer1` is applied to the first (control) group and `transformer2` is applied to the second (test) group (if it exists).
+Transformers can be one of `id` (identity, no transformation) or `f0.0` ('f' for factor followed by a user-specified float64 value)
 
 
 ### Input Files

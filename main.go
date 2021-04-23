@@ -49,7 +49,7 @@ func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1,
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
 	om := flag.Bool("os", false, "Include statistic (e.g., mean) in output")
 	rm := flag.Bool("mem", false, "Print runtime memory to Stdout")
-	transformers := flag.String("tra", "id:id", "The transformer(s) applied to the execution file(s), in the form of 'transformer1:transformer2', where transformer1 is applied to the first (control) group and transformer2 is applied to the second (test) group. Transformers can be one of 'id' (identity, no transformation) or 'f0.0' ('f' for factor followed by a float64)")
+	transformers := flag.String("tra", "id:id", "The transformer(s) applied to the execution file(s), in the form of 'transformer1:transformer2', where transformer1 is applied to the first (control) group and transformer2 is applied to the second (test) group. Transformers can be one of 'id' (identity, no transformation) or 'f0.0' ('f' for factor followed by a user-specified float64 value)")
 	flag.Parse()
 
 	args := flag.Args()
