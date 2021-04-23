@@ -105,3 +105,27 @@ func mergeExecutionValues(evs Executions, out Chan) {
 		Exec: prev,
 	}
 }
+
+func TransformChan(transformer ExecutionTransformer, c Chan) Chan {
+	out := make(Chan)
+
+	go func() {
+		for ev := range c {
+			nev := ExecutionValue{
+				Type: ev.Type,
+				Err:  ev.Err,
+			}
+
+			if ev.Type == ExecNext {
+				nev.Exec = transformer.transform(ev.Exec)
+			} else {
+				nev.Exec = ev.Exec
+			}
+
+			out <- nev
+		}
+		close(out)
+	}()
+
+	return out
+}

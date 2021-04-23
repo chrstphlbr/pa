@@ -39,7 +39,9 @@ type statisticFunc struct {
 	Func stat.StatisticFunc
 }
 
-func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, outputMetric bool, printMem bool) {
+const defaultRoundingPrecision = 5
+
+func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1, f2 []string, invocationSamples int, transformer1, transformer2 bench.ExecutionTransformer, outputMetric bool, printMem bool) {
 	sfStr := flag.String("st", "mean", "The statistic to be calculated")
 	s := flag.Int("bs", 10000, "Number of bootstrap simulations")
 	sls := flag.String("sl", "0.01", "Significance levels (multiple seperated by ',')")
@@ -47,6 +49,7 @@ func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1,
 	m := flag.Int("m", 1, "Number of multiple files belongig to one group (test or control); e.g., 3 means 6 files in total, 3 test and 3 control")
 	om := flag.Bool("os", false, "Include statistic (e.g., mean) in output")
 	rm := flag.Bool("mem", false, "Print runtime memory to Stdout")
+	transformers := flag.String("tra", "id:id", "The transformer(s) applied to the execution file(s), in the form of 'transformer1:transformer2', where transformer1 is applied to the first (control) group and transformer2 is applied to the second (test) group. Transformers can be one of 'id' (identity, no transformation) or 'f0.0' ('f' for factor followed by a float64)")
 	flag.Parse()
 
 	args := flag.Args()
@@ -126,11 +129,18 @@ func parseArgs() (c cmd, sim int, sigLevs []float64, statFunc statisticFunc, f1,
 		os.Exit(1)
 	}
 
-	return c, *s, slsFloat, sf, f1, f2, *is, *om, *rm
+	transformer1, transformer2, err := parseTransformers(*transformers)
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "Could not parse transformers: %v\n", err)
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	return c, *s, slsFloat, sf, f1, f2, *is, transformer1, transformer2, *om, *rm
 }
 
 func main() {
-	cmd, sim, sigLevels, sf, f1, f2, is, outputMetric, printMem := parseArgs()
+	cmd, sim, sigLevels, sf, f1, f2, is, transformer1, transformer2, outputMetric, printMem := parseArgs()
 	maxNrWorkers := runtime.NumCPU()
 
 	var sampler bench.InvocationSampler
@@ -167,11 +177,11 @@ func main() {
 	switch cmd {
 	case cmdCI:
 		exec = func() {
-			ci(ciFunc, f1[0], outputMetric, printMem)
+			ci(ciFunc, f1[0], transformer1, outputMetric, printMem)
 		}
 	case cmdDet:
 		exec = func() {
-			det(ciFunc, ciRatioFunc, f1, f2, outputMetric, printMem)
+			det(ciFunc, ciRatioFunc, f1, f2, transformer1, transformer2, outputMetric, printMem)
 		}
 	default:
 		fmt.Fprintf(os.Stdout, "Invalid command '%s' (available: 'ci' and 'det')\n\n", cmd)
@@ -184,7 +194,7 @@ func main() {
 	fmt.Fprintf(os.Stdout, "#Total execution took %v\n", time.Since(start))
 }
 
-func ci(ciFunc bootstrap.CIFunc, fp string, outputMetric, printMem bool) {
+func ci(ciFunc bootstrap.CIFunc, fp string, transformer bench.ExecutionTransformer, outputMetric, printMem bool) {
 	f, err := os.Open(fp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not open file '%s'\n", fp)
@@ -198,6 +208,9 @@ func ci(ciFunc bootstrap.CIFunc, fp string, outputMetric, printMem bool) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return
+	}
+	if transformer != nil {
+		c = bench.TransformChan(transformer, c)
 	}
 
 	rc := bootstrap.CIs(c, ciFunc)
@@ -225,7 +238,7 @@ func ci(ciFunc bootstrap.CIFunc, fp string, outputMetric, printMem bool) {
 	}
 }
 
-func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []string, outputMetric, printMem bool) {
+func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []string, transformer1, transformer2 bench.ExecutionTransformer, outputMetric, printMem bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -234,11 +247,17 @@ func det(ciFunc bootstrap.CIFunc, ciRatioFunc bootstrap.CIRatioFunc, fp1, fp2 []
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return
 	}
+	if transformer1 != nil {
+		c1 = bench.TransformChan(transformer1, c1)
+	}
 
 	c2, err := mergedInput(ctx, fp2)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		return
+	}
+	if transformer2 != nil {
+		c2 = bench.TransformChan(transformer2, c2)
 	}
 
 	rc := bootstrap.CIRatios(c1, c2, ciFunc, ciRatioFunc)
@@ -295,6 +314,39 @@ func mergedInput(ctx context.Context, fs []string) (bench.Chan, error) {
 		chans = append(chans, c1)
 	}
 	return bench.MergeChans(chans...), nil
+}
+
+func parseTransformers(str string) (transformer1, transformer2 bench.ExecutionTransformer, err error) {
+	colonIdx := strings.Index(str, ":")
+	if colonIdx == -1 {
+		transformer1, err = parseTransformer(str)
+		return transformer1, nil, err
+	} else {
+		transformer1, err1 := parseTransformer(str[:colonIdx])
+		if err1 != nil {
+			return nil, nil, fmt.Errorf("error transformer1: %w", err1)
+		}
+		transformer2, err2 := parseTransformer(str[colonIdx+1:])
+		if err2 != nil {
+			return nil, nil, fmt.Errorf("error transformer2: %w", err2)
+		}
+		return transformer1, transformer2, nil
+	}
+}
+
+func parseTransformer(str string) (bench.ExecutionTransformer, error) {
+	var t bench.ExecutionTransformer
+	switch {
+	case str == "id":
+		t = nil // do not use the identity transformer
+	case strings.HasPrefix(str, "f"):
+		f, err := strconv.ParseFloat(str[1:], 64)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse factor transformer: %w", err)
+		}
+		t = bench.ConstantFactorExecutionTransformerFunc(f, defaultRoundingPrecision)
+	}
+	return t, nil
 }
 
 func printMemStats(print bool) {
