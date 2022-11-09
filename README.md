@@ -1,3 +1,6 @@
+[![DOI](https://zenodo.org/badge/227604330.svg)](https://zenodo.org/badge/latestdoi/227604330)
+
+
 # *pa* - Performance (Change) Analysis
 
 *pa* is an efficient tool for analyzing performance data based on statistical simulation, i.e., bootstrap.
